@@ -1,0 +1,102 @@
+# models.py
+from datetime import datetime
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from extensions import db
+from flask import url_for
+
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, index=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    display_name = db.Column(db.String(120), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relations
+    videos = db.relationship('Video', backref='user', lazy=True)
+    comments = db.relationship('Comment', backref='user', lazy=True)
+    likes = db.relationship('Like', backref='user', lazy=True)
+    
+    # Suivis
+    following = db.relationship(
+        'Follow', 
+        foreign_keys='Follow.follower_id',
+        backref='follower', 
+        lazy='dynamic'
+    )
+    followers = db.relationship(
+        'Follow', 
+        foreign_keys='Follow.followed_id',
+        backref='followed', 
+        lazy='dynamic'
+    )
+
+    def set_password(self, raw):
+        self.password_hash = generate_password_hash(raw)
+
+    def check_password(self, raw) -> bool:
+        return check_password_hash(self.password_hash, raw)
+
+class Video(db.Model):
+    __tablename__ = "videos"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default="")
+    category = db.Column(db.String(40), default="tendance", index=True)
+    filename = db.Column(db.String(255), nullable=True)
+    external_url = db.Column(db.String(500), nullable=True)
+    thumb_url = db.Column(db.String(500), nullable=True)
+    duration = db.Column(db.String(20), default="")
+    creator = db.Column(db.String(80), default="Anonyme")
+    views = db.Column(db.Integer, default=0)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    hls_manifest = db.Column(db.String(500), nullable=True)
+    
+    # Relations
+    comments = db.relationship('Comment', backref='video', lazy=True)
+    likes = db.relationship('Like', backref='video', lazy=True)
+
+    @property
+    def source_url(self):
+        if self.hls_manifest:
+            return url_for("hls", filename=self.hls_manifest, _external=False)
+        if self.filename:
+            return url_for("media", filename=self.filename, _external=False)
+        return self.external_url or ""
+    
+    @property
+    def like_count(self):
+        return Like.query.filter_by(video_id=self.id, is_like=True).count()
+    
+    @property
+    def dislike_count(self):
+        return Like.query.filter_by(video_id=self.id, is_like=False).count()
+
+class Comment(db.Model):
+    __tablename__ = "comments"
+    id = db.Column(db.Integer, primary_key=True)
+    video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), index=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True, nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Like(db.Model):
+    __tablename__ = "likes"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), nullable=False)
+    is_like = db.Column(db.Boolean, nullable=False)  # True = like, False = dislike
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('user_id', 'video_id'),)
+
+class Follow(db.Model):
+    __tablename__ = "follows"
+    id = db.Column(db.Integer, primary_key=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    followed_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id'),)
