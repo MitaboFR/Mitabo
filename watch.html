@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ video.title }} - Mitabo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="/" class="text-2xl font-bold text-red-600">Mitabo</a>
+            <div class="flex items-center space-x-4">
+                {% if current_user.is_authenticated %}
+                    <span>Bonjour, {{ current_user.username }}</span>
+                    <a href="/auth/logout" class="text-red-600">Déconnexion</a>
+                {% else %}
+                    <a href="/auth/login" class="text-blue-600">Connexion</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Vidéo principale -->
+            <div class="lg:col-span-2">
+                <!-- Lecteur vidéo -->
+                <div class="bg-black rounded-lg overflow-hidden aspect-video mb-4">
+                    {% if video.hls_manifest %}
+                        <video id="player" controls preload="metadata" playsinline class="w-full h-full" poster="{{ video.thumb_url }}"></video>
+                        <script>
+                            (function(){
+                                var video = document.getElementById('player');
+                                var src = '/hls/{{ video.hls_manifest }}';
+                                if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                                    video.src = src;
+                                } else if (window.Hls) {
+                                    var hls = new Hls();
+                                    hls.loadSource(src);
+                                    hls.attachMedia(video);
+                                }
+                            })();
+                        </script>
+                    {% else %}
+                        <video controls preload="metadata" playsinline class="w-full h-full" poster="{{ video.thumb_url }}">
+                            <source src="{{ video.source_url }}" type="video/mp4">
+                            Votre navigateur ne supporte pas la lecture vidéo HTML5.
+                        </video>
+                    {% endif %}
+                </div>
+
+                <!-- Titre et stats -->
+                <h1 class="text-2xl font-bold mb-2">{{ video.title }}</h1>
+                <p class="text-gray-600 mb-4">{{ video.views|default(0) }} vues • {{ video.created_at.strftime('%d %b %Y') }}</p>
+
+                <!-- Actions (Like, Dislike, Partage) -->
+                <div class="flex items-center space-x-4 mb-6">
+                    <!-- Boutons Like/Dislike -->
+                    <div class="flex items-center bg-gray-200 rounded-full">
+                        <form method="POST" action="/video/like/{{ video.id }}" class="inline">
+                            <button type="submit" class="flex items-center px-4 py-2 rounded-l-full hover:bg-gray-300 transition-colors
+                                {% if user_like and user_like.is_like %}bg-blue-200 text-blue-700{% endif %}">
+                                <i class="fas fa-thumbs-up mr-2"></i>
+                                <span>{{ video.like_count }}</span>
+                            </button>flask routes
+
+                        </form>
+                        <div class="w-px h-6 bg-gray-300"></div>
+                        <form method="POST" action="/video/dislike/{{ video.id }}" class="inline">
+                            <button type="submit" class="flex items-center px-4 py-2 rounded-r-full hover:bg-gray-300 transition-colors
+                                {% if user_like and not user_like.is_like %}bg-red-200 text-red-700{% endif %}">
+                                <i class="fas fa-thumbs-down mr-2"></i>
+                                <span>{{ video.dislike_count }}</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Bouton Partage -->
+                    <button onclick="shareVideo()" class="flex items-center px-4 py-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
+                        <i class="fas fa-share mr-2"></i>
+                        Partager
+                    </button>
+                </div>
+
+                <!-- Informations du créateur -->
+                <div class="bg-white rounded-lg p-4 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <!-- Avatar du créateur -->
+                            <div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-4">
+                                {% if video.user and video.user.avatar and video.user.avatar != 'default.png' %}
+                                    <img src="/static/avatars/{{ video.user.avatar }}" alt="{{ video.user.username }}" class="w-12 h-12 rounded-full object-cover">
+                                {% else %}
+                                    <i class="fas fa-user text-gray-600"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h3 class="font-semibold">
+                                    {% if video.user %}
+                                        <a href="/profil/{{ video.user.username }}" class="hover:text-blue-600">
+                                            {{ video.user.username }}
+                                        </a>
+                                    {% else %}
+                                        {{ video.creator|default('Utilisateur anonyme') }}
+                                    {% endif %}
+                                </h3>
+                                {% if video.user %}
+                                    <p class="text-sm text-gray-600">{{ video.user.followers_count }} abonnés</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Bouton S'abonner -->
+                        {% if current_user.is_authenticated and video.user and video.user.id != current_user.id %}
+                            {% if is_following %}
+                                <form method="POST" action="/profil/unfollow/{{ video.user.id }}" class="inline">
+                                    <button type="submit" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-full hover:bg-gray-400 transition-colors">
+                                        Désabonné
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="/profil/follow/{{ video.user.id }}" class="inline">
+                                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors">
+                                        S'abonner
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Description -->
+                    {% if video.description %}
+                        <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                            <p class="text-gray-700 whitespace-pre-wrap">{{ video.description }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Section Commentaires -->
+                <div class="bg-white rounded-lg p-4">
+                    <h3 class="text-lg font-semibold mb-4">Commentaires ({{ comments|length }})</h3>
+                    
+                    <!-- Formulaire d'ajout de commentaire -->
+                    {% if current_user.is_authenticated %}
+                        <form method="POST" action="/video/comment/{{ video.id }}" class="mb-6">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user text-gray-600 text-sm"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <textarea name="text" rows="3" placeholder="Ajouter un commentaire..." 
+                                            class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                                    <div class="flex justify-end mt-2">
+                                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                            Commenter
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    {% else %}
+                        <p class="text-gray-600 mb-6">
+                            <a href="/auth/login" class="text-blue-600 hover:underline">Connectez-vous</a> pour commenter cette vidéo.
+                        </p>
+                    {% endif %}
+
+                    <!-- Liste des commentaires -->
+                    <div class="space-y-4">
+                        {% for comment in comments %}
+                            <div class="flex items-start space-x-3">
+                                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user text-gray-600 text-sm"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <span class="font-medium">{{ comment.author.username }}</span>
+                                        <span class="text-sm text-gray-500">{{ comment.created_at.strftime('%d %b %Y à %H:%M') }}</span>
+                                    </div>
+                                    <p class="text-gray-700">{{ comment.text }}</p>
+                                </div>
+                            </div>
+                        {% else %}
+                            <p class="text-gray-500 text-center py-6">Aucun commentaire pour le moment.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar - Vidéos recommandées -->
+            <div class="lg:col-span-1">
+                <h3 class="text-lg font-semibold mb-4">Vidéos recommandées</h3>
+                <div class="space-y-4">
+                    {% for recommended_video in more_videos %}
+                        <a href="/watch/{{ recommended_video.id }}" class="block bg-white rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                            <div class="flex">
+                                <img src="{{ recommended_video.thumb_url or 'https://via.placeholder.com/168x94' }}" 
+                                     alt="{{ recommended_video.title }}" class="w-42 h-24 object-cover">
+                                <div class="p-3 flex-1">
+                                    <h4 class="font-medium text-sm line-clamp-2 mb-1">{{ recommended_video.title }}</h4>
+                                    <p class="text-xs text-gray-600">{{ recommended_video.creator }}</p>
+                                    <p class="text-xs text-gray-500">{{ recommended_video.views }} vues</p>
+                                </div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de partage -->
+    <div id="shareModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Partager cette vidéo</h3>
+                <button onclick="closeShareModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div class="flex items-center p-3 border rounded-lg">
+                    <input type="text" id="shareUrl" value="{{ request.url }}" readonly 
+                           class="flex-1 bg-gray-50 p-2 rounded text-sm">
+                    <button onclick="copyUrl()" class="ml-2 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                        Copier
+                    </button>
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <a href="https://twitter.com/intent/tweet?url={{ request.url|urlencode }}&text={{ video.title|urlencode }}" 
+                       target="_blank" class="p-3 bg-blue-400 text-white rounded-full hover:bg-blue-500">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" 
+                       target="_blank" class="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700">
+                        <i class="fab fa-facebook-f"></i>
+                    </a>
+                    <a href="https://wa.me/?text={{ video.title|urlencode }}%20{{ request.url|urlencode }}" 
+                       target="_blank" class="p-3 bg-green-500 text-white rounded-full hover:bg-green-600">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function shareVideo() {
+            document.getElementById('shareModal').classList.remove('hidden');
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').classList.add('hidden');
+        }
+
+        function copyUrl() {
+            const urlInput = document.getElementById('shareUrl');
+            urlInput.select();
+            document.execCommand('copy');
+            
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = 'Copié!';
+            button.classList.add('bg-green-600');
+            button.classList.remove('bg-blue-600');
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('bg-green-600');
+                button.classList.add('bg-blue-600');
+            }, 2000);
+        }
+
+        // Fermer la modal en cliquant en dehors
+        document.getElementById('shareModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeShareModal();
+            }
+        });
+    </script>
+
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</body>
+</html>

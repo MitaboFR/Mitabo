@@ -1,66 +1,45 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ user.username }} - Mitabo</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body class="bg-gray-100">
-    <!-- Header -->
-    <header class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="/" class="text-2xl font-bold text-red-600">Mitabo</a>
-            <div class="flex items-center space-x-4">
-                {% if current_user.is_authenticated %}
-                    <span>Bonjour, {{ current_user.username }}</span>
-                    <a href="/auth/logout" class="text-red-600">Déconnexion</a>
-                {% else %}
-                    <a href="/auth/login" class="text-blue-600">Connexion</a>
-                {% endif %}
-            </div>
-        </div>
-    </header>
+{% extends "base.html" %}
+{% block content %}
 
-    <div class="container mx-auto px-4 py-6">
-        <!-- En-tête du profil -->
-        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div class="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
-                <!-- Avatar -->
-                <div class="w-32 h-32 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
-                    {% if user.avatar and user.avatar != 'default.png' %}
-                        <img src="/static/avatars/{{ user.avatar }}" alt="{{ user.username }}" class="w-full h-full object-cover">
-                    {% else %}
-                        <i class="fas fa-user text-4xl text-gray-600"></i>
-                    {% endif %}
-                </div>
+<div class="profil-container">
+    <h2>Profil de {{ user.username }}</h2>
+    <img src="{{ url_for('static', filename='avatars/' ~ user.avatar) }}" alt="Avatar" width="120">
+    <p>{{ user.bio }}</p>
+    <p>Membre depuis : {{ user.created_at.strftime("%d/%m/%Y") }}</p>
 
-                <!-- Informations du profil -->
-                <div class="flex-1">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                        <div>
-                            <h1 class="text-3xl font-bold mb-2">{{ user.username }}</h1>
-                            <div class="flex items-center space-x-6 text-gray-600">
-                                <span><strong>{{ user.followers_count }}</strong> abonnés</span>
-                                <span><strong>{{ user.following_count }}</strong> abonnements</span>
-                                <span><strong>{{ videos|length }}</strong> vidéos</span>
-                            </div>
-                        </div>
+    <!-- --- Abonnement --- -->
+    {% if current_user.is_authenticated and current_user.id != user.id %}
+        {% if current_user.is_following(user) %}
+            <a href="{{ url_for('profil.unfollow_user', user_id=user.id) }}" class="btn btn-warning">Se désabonner ❌</a>
+        {% else %}
+            <a href="{{ url_for('profil.follow_user', user_id=user.id) }}" class="btn btn-success">S'abonner ✅</a>
+        {% endif %}
+    {% endif %}
 
-                        <!-- Bouton S'abonner/Se désabonner -->
-                        {% if current_user.is_authenticated and user.id != current_user.id %}
-                            <div class="mt-4 md:mt-0">
-                                {% if is_following %}
-                                    <form method="POST" action="/profil/unfollow/{{ user.id }}" class="inline">
-                                        <button type="submit" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-full hover:bg-gray-400 transition-colors flex items-center">
-                                            <i class="fas fa-user-check mr-2"></i>
-                                            Désabonné
-                                        </button>
-                                    </form>
-                                {% else %}
-                                    <form method="POST" action="/profil/follow/{{ user.id }}" class="inline">
-                                        <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors flex items-center">
-                                            <i class="fas fa-user-plus mr-2"></i>
-                                            S'abonner
-                                        </button>
+    <hr>
+
+    <!-- --- Vidéos de l'utilisateur --- -->
+    <h3>Vidéos de {{ user.username }}</h3>
+    <ul>
+        {% for v in videos %}
+            <li>
+                <a href="{{ url_for('video.show_video', video_id=v.id) }}">
+                    🎬 {{ v.title }} ({{ v.views }} vues)
+                </a>
+            </li>
+        {% else %}
+            <li>Aucune vidéo postée.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+{% endblock %}
+<h2>Profil de {{ user.username }}</h2>
+<img src="{{ url_for('static', filename='avatars/' ~ user.avatar) }}" alt="Avatar" width="120">
+<p>{{ user.bio }}</p>
+<p>Membre depuis : {{ user.created_at.strftime("%d/%m/%Y") }}</p>
+
+<p>
+    👥 Abonnés : {{ user.followers_count }} |
+    ➡️ Abonnements : {{ user.following_count }}
+</p>
