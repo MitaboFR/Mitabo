@@ -3,3 +3,6 @@ flask_sqlalchemy
 flask_login
 werkzeug
 ffmpeg-python
+gunicorn
+psycopg2-binary
+supabase
