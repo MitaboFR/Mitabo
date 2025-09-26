@@ -34,12 +34,6 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-# ------------------------------
-# Création automatique des tables au lancement (Render inclus)
-# ------------------------------
-with app.app_context():
-    db.create_all()  # Crée toutes les tables définies ci-dessous
-
 # -------------------------
 # Répertoires
 # -------------------------
@@ -130,10 +124,17 @@ class Follow(db.Model):
 
 
 # ------------------------------
+# Création automatique des tables (Render inclus)
+# ------------------------------
+with app.app_context():
+    db.create_all()
+
+# ------------------------------
 # Lancement en local
 # ------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+
 
 
 # -------------------------
@@ -1070,3 +1071,4 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
