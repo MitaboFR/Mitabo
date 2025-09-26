@@ -9,6 +9,7 @@ from datetime import datetime
 import subprocess
 import shutil
 from PIL import Image
+from sqlalchemy import text
 
 # ------------------------------
 # Configuration de l'application Flask
@@ -33,6 +34,33 @@ migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
+
+# ------------------------------
+# Création automatique des tables au lancement
+# ------------------------------
+if __name__ == "__main__":
+    with app.app_context():
+        db.engine.execute(text("""
+        CREATE TABLE IF NOT EXISTS videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            description TEXT,
+            category TEXT,
+            filename TEXT,
+            external_url TEXT,
+            thumb_url TEXT,
+            duration INTEGER,
+            creator TEXT,
+            views INTEGER DEFAULT 0,
+            likes INTEGER DEFAULT 0,
+            dislikes INTEGER DEFAULT 0,
+            user_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            hls_manifest TEXT
+        );
+        """))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+
 
 # -------------------------
 # Répertoires
@@ -1052,13 +1080,8 @@ def init_database():
 # Entrée app
 # -------------------------
 if __name__ == "__main__":
-    with app.app_context():
-        init_db()  # Création des tables si elles n'existent pas
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)), debug=True)
-
+    # Initialiser la DB au démarrage
+    init_db()
+    app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
-for rule in app.url_map.iter_rules():
-    print(rule)
-
-
