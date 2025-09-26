@@ -14,7 +14,6 @@ from sqlalchemy import text
 # ------------------------------
 # Configuration de l'application Flask
 # ------------------------------
-
 app = Flask(__name__)
 
 # Configuration
@@ -36,31 +35,10 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 # ------------------------------
-# Création automatique des tables au lancement
+# Création automatique des tables au lancement (Render inclus)
 # ------------------------------
-if __name__ == "__main__":
-    with app.app_context():
-        db.engine.execute(text("""
-        CREATE TABLE IF NOT EXISTS videos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            description TEXT,
-            category TEXT,
-            filename TEXT,
-            external_url TEXT,
-            thumb_url TEXT,
-            duration INTEGER,
-            creator TEXT,
-            views INTEGER DEFAULT 0,
-            likes INTEGER DEFAULT 0,
-            dislikes INTEGER DEFAULT 0,
-            user_id INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            hls_manifest TEXT
-        );
-        """))
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
-
+with app.app_context():
+    db.create_all()  # Crée toutes les tables définies ci-dessous
 
 # -------------------------
 # Répertoires
@@ -124,7 +102,7 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True, nullable=False)
     body = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Relations
     user = db.relationship('User', backref='comments', lazy=True)
     video = db.relationship('Video', backref='comments', lazy=True)
@@ -149,6 +127,13 @@ class Follow(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     __table_args__ = (db.UniqueConstraint("follower_id", "followed_id", name="unique_follow"),)
+
+
+# ------------------------------
+# Lancement en local
+# ------------------------------
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
 
 
 # -------------------------
