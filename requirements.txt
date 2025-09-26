@@ -1,8 +1,10 @@
 flask
 flask_sqlalchemy
+flask_migrate
 flask_login
 werkzeug
 ffmpeg-python
 gunicorn
 psycopg2-binary
 supabase
+pillow
