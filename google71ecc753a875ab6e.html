@@ -1,1 +1,8 @@
-google-site-verification: google71ecc753a875ab6e.html
+from flask import Flask, send_from_directory, current_app
+
+app = Flask(__name__)
+
+@app.route('/google1234567890abcdef.html')
+def serve_verification():
+    return send_from_directory(current_app.static_folder, 'google1234567890abcdef.html')
+# The file 'google1234567890abcdef.html' should be placed in the 'static' directory of the Flask application.
