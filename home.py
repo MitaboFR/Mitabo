@@ -1052,11 +1052,13 @@ def init_database():
 # Entrée app
 # -------------------------
 if __name__ == "__main__":
-    # Initialiser la DB au démarrage
-    init_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    with app.app_context():
+        init_db()  # Création des tables si elles n'existent pas
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)), debug=True)
+
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 for rule in app.url_map.iter_rules():
     print(rule)
+
 
