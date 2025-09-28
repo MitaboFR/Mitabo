@@ -84,11 +84,10 @@
     </div>
 
 <!-- Bouton XP -->
-<button id="xp-button" 
-        data-video-id="{{ video.id }}" 
-        class="flex items-center px-4 py-2 bg-yellow-200 rounded-full hover:bg-yellow-300 transition-colors">
+<button class="xp-button flex items-center px-4 py-2 bg-yellow-200 rounded-full hover:bg-yellow-300 transition-colors"
+        data-video-id="{{ video.id }}">
     <i class="fas fa-star mr-2"></i>
-    <span id="xp-count">{{ video.xp or 0 }}</span> XP
+    <span class="xp-count">{{ video.xp or 0 }}</span> XP
 </button>
 
     <!-- Bouton Partage -->
@@ -101,18 +100,19 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Sélectionne tous les boutons XP
     document.querySelectorAll('.xp-button').forEach(function(button) {
         button.addEventListener('click', function() {
-            const videoId = this.dataset.videoId;
-            const xpCountSpan = this.querySelector('.xp-count');
+            const videoId = this.dataset.videoId;               // récupère l'ID de la vidéo
+            const xpCountSpan = this.querySelector('.xp-count'); // récupère le compteur spécifique
 
             fetch(`/video/xp/${videoId}`, { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
                     if (data.xp !== undefined) {
-                        xpCountSpan.textContent = data.xp;
+                        xpCountSpan.textContent = data.xp;      // met à jour le compteur
                     } else if (data.message) {
-                        alert(data.message);
+                        alert(data.message);                   // affiche message d'erreur éventuel
                     }
                 })
                 .catch(err => console.error("Erreur XP:", err));
@@ -331,6 +331,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </body>
 
 </html>
+
 
 
 
