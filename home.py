@@ -688,6 +688,7 @@ def upload_form():
 @login_required
 def upload_post():
     try:
+        # --- Récupérer le fichier et infos ---
         f = request.files.get("file")
         title = (request.form.get("title") or "Sans titre").strip()
         description = (request.form.get("description") or "").strip()
@@ -702,6 +703,7 @@ def upload_post():
             flash("Extension non supportée")
             return redirect(url_for("upload_form"))
 
+        # --- Préparer le fichier ---
         filename = secure_filename(f.filename)
         base, ext = os.path.splitext(filename)
         counter = 1
@@ -711,19 +713,32 @@ def upload_post():
             counter += 1
 
         file_path = os.path.join(UPLOAD_DIR, final)
-        f.save(file_path)
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        f.save(file_path)  # Sauvegarde locale
 
+        # --- Upload vers Supabase ---
+        with open(file_path, "rb") as file_data:
+            res = supabase.storage.from_(BUCKET_NAME).upload(f"videos/{final}", file_data)
+        public_url = None
+        if res.get("error"):
+            flash(f"Erreur Supabase: {res['error']['message']}")
+        else:
+            public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")["publicUrl"]
+
+        # --- Créer l'objet Video ---
         v = Video(
             title=title,
             description=description,
             category=category if category in CATEGORIES_MAP else "tendance",
             filename=final,
-            thumb_url="https://picsum.photos/seed/mitabo-" + base + "/640/360",
+            thumb_url=f"https://picsum.photos/seed/mitabo-{base}/640/360",
             duration="",
             creator=creator,
             user_id=current_user.id,
+            url=public_url  # Assure-toi que ton modèle Video a ce champ
         )
 
+        # --- Transcodage HLS si demandé ---
         if to_hls and ffmpeg_exists():
             target_dir = os.path.join(HLS_DIR, f"video_{datetime.utcnow().timestamp():.0f}")
             try:
@@ -733,14 +748,18 @@ def upload_post():
                 print(f"Erreur transcodage HLS: {e}")
                 flash("Transcodage HLS échoué — lecture MP4 directe utilisée.")
 
+        # --- Sauvegarder dans SQLite ---
         db.session.add(v)
         db.session.commit()
 
+        flash("Vidéo uploadée avec succès !")
         return redirect(url_for("watch", video_id=v.id))
+
     except Exception as e:
         print(f"Erreur dans upload_post(): {e}")
         flash(f"Erreur lors de l'upload: {e}")
         return redirect(url_for("upload_form"))
+
 
 @app.get("/media/<path:filename>")
 def media(filename):
@@ -1093,6 +1112,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
