@@ -101,16 +101,15 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Sélectionne tous les boutons XP
-    document.querySelectorAll('[id="xp-button"]').forEach(function(button) {
+    document.querySelectorAll('.xp-button').forEach(function(button) {
         button.addEventListener('click', function() {
             const videoId = this.dataset.videoId;
-            const xpCountSpan = this.querySelector('#xp-count');
-            
+            const xpCountSpan = this.querySelector('.xp-count');
+
             fetch(`/video/xp/${videoId}`, { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.xp !== undefined && xpCountSpan) {
+                    if (data.xp !== undefined) {
                         xpCountSpan.textContent = data.xp;
                     } else if (data.message) {
                         alert(data.message);
@@ -121,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
 
 
 
@@ -331,5 +331,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </body>
 
 </html>
+
 
 
