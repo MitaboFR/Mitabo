@@ -15,20 +15,24 @@ from models import Video, Like, Xp
 # ------------------------------
 # Configuration de l'application Flask
 # ------------------------------
+
 app = Flask(__name__)
 
-# Configuration
 app.config.update(
-    SQLALCHEMY_DATABASE_URI="sqlite:///mitabo.db",
-    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    SQLALCHEMY_DATABASE_URI=SQLALCHEMY_DATABASE_URI,
+    SQLALCHEMY_TRACK_MODIFICATIONS=SQLALCHEMY_TRACK_MODIFICATIONS,
     SECRET_KEY="dev-mitabo-secret-key-change-in-production",
     MAX_CONTENT_LENGTH=1024 * 1024 * 1024,  # 1 Go max pour les fichiers uploadés
     DEBUG=True,
 )
 
-# Initialisation de la base de données
+# Initialisation des extensions
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+
+# Supabase Storage centralisé
+from supabase_config import supabase, BUCKET_NAME
 
 # Initialisation de Flask-Login
 login_manager = LoginManager()
@@ -1112,6 +1116,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
