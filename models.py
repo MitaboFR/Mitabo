@@ -17,7 +17,8 @@ class User(UserMixin, db.Model):
     videos = db.relationship('Video', backref='user', lazy=True)
     comments = db.relationship('Comment', backref='user', lazy=True)
     likes = db.relationship('Like', backref='user', lazy=True)
-    
+    xps = db.relationship('Xp', backref='user', lazy=True)   # 👈 ajout
+
     # Suivis
     following = db.relationship(
         'Follow', 
@@ -57,6 +58,7 @@ class Video(db.Model):
     # Relations
     comments = db.relationship('Comment', backref='video', lazy=True)
     likes = db.relationship('Like', backref='video', lazy=True)
+    xps = db.relationship('Xp', backref='video', lazy=True)   # 👈 ajout
 
     @property
     def source_url(self):
@@ -74,6 +76,11 @@ class Video(db.Model):
     def dislike_count(self):
         return Like.query.filter_by(video_id=self.id, is_like=False).count()
 
+    @property
+    def xp_count(self):
+        return Xp.query.filter_by(video_id=self.id).count()   # 👈 pratique pour compter les XP
+
+
 class Comment(db.Model):
     __tablename__ = "comments"
     id = db.Column(db.Integer, primary_key=True)
@@ -81,6 +88,7 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True, nullable=False)
     body = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 class Like(db.Model):
     __tablename__ = "likes"
@@ -92,6 +100,7 @@ class Like(db.Model):
     
     __table_args__ = (db.UniqueConstraint('user_id', 'video_id'),)
 
+
 class Follow(db.Model):
     __tablename__ = "follows"
     id = db.Column(db.Integer, primary_key=True)
@@ -100,3 +109,16 @@ class Follow(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id'),)
+
+
+# -------------------------
+# Nouveau modèle XP
+# -------------------------
+class Xp(db.Model):
+    __tablename__ = "xp"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'video_id', name="unique_user_xp"),)
