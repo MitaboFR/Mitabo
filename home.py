@@ -348,18 +348,39 @@ WATCH_BODY = """
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                    <div class="flex items-center space-x-2">
-                        <button onclick="likeVideo({{ video.id }})" 
-                                class="flex items-center space-x-1 px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
-                            <span>👍</span>
-                            <span id="likes-count">{{ video.likes or 0 }}</span>
-                        </button>
-                        <button onclick="dislikeVideo({{ video.id }})" 
-                                class="flex items-center space-x-1 px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
-                            <span>👎</span>
-                            <span id="dislikes-count">{{ video.dislikes or 0 }}</span>
-                        </button>
-                    </div>
+                  <div class="flex items-center space-x-2">
+    <!-- Like -->
+    <button onclick="likeVideo({{ video.id }})" 
+            class="flex items-center space-x-1 px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
+        <span>👍</span>
+        <span id="likes-count">{{ video.likes or 0 }}</span>
+    </button>
+
+    <!-- Dislike -->
+    <button onclick="dislikeVideo({{ video.id }})" 
+            class="flex items-center space-x-1 px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
+        <span>👎</span>
+        <span id="dislikes-count">{{ video.dislikes or 0 }}</span>
+    </button>
+
+    <!-- XP -->
+    <button onclick="giveXp({{ video.id }})" 
+            class="flex items-center space-x-1 px-3 py-1 rounded bg-yellow-200 hover:bg-yellow-300">
+        <span>✨ XP</span>
+        <span id="xp-count">{{ video.xp or 0 }}</span>
+    </button>
+</div>
+
+<script>
+function giveXp(videoId) {
+    fetch(`/video/${videoId}/xp`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("xp-count").textContent = data.xp;
+        });
+}
+</script>
+
                 {% endif %}
             </div>
             
@@ -1071,4 +1092,5 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
