@@ -99,21 +99,25 @@
     </button>
 </div>
 
-<!-- Script pour le bouton XP -->
 <script>
-function giveXp(videoId) {
-    fetch(`/video/xp/${videoId}`, { method: "POST" })
-        .then(res => res.json())
-        .then(data => {
-            if(data.xp !== undefined){
-                document.getElementById("xp-count").textContent = data.xp;
-            } else if(data.message){
-                alert(data.message);
-            }
-        })
-        .catch(err => console.error("Erreur XP:", err));
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const xpButton = document.getElementById('xp-button');
+    xpButton.addEventListener('click', function() {
+        const videoId = this.dataset.videoId;
+        fetch(`/video/xp/${videoId}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.xp !== undefined){
+                    document.getElementById('xp-count').textContent = data.xp;
+                } else if(data.message){
+                    alert(data.message);
+                }
+            })
+            .catch(err => console.error("Erreur XP:", err));
+    });
+});
 </script>
+
 
                 <!-- Informations du créateur -->
                 <div class="bg-white rounded-lg p-4 mb-6">
@@ -322,3 +326,4 @@ function giveXp(videoId) {
 </body>
 
 </html>
+
