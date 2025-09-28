@@ -101,22 +101,27 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const xpButton = document.getElementById('xp-button');
-    xpButton.addEventListener('click', function() {
-        const videoId = this.dataset.videoId;
-        fetch(`/video/xp/${videoId}`, { method: 'POST' })
-            .then(res => res.json())
-            .then(data => {
-                if(data.xp !== undefined){
-                    document.getElementById('xp-count').textContent = data.xp;
-                } else if(data.message){
-                    alert(data.message);
-                }
-            })
-            .catch(err => console.error("Erreur XP:", err));
+    // Sélectionne tous les boutons XP
+    document.querySelectorAll('[id="xp-button"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const videoId = this.dataset.videoId;
+            const xpCountSpan = this.querySelector('#xp-count');
+            
+            fetch(`/video/xp/${videoId}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.xp !== undefined && xpCountSpan) {
+                        xpCountSpan.textContent = data.xp;
+                    } else if (data.message) {
+                        alert(data.message);
+                    }
+                })
+                .catch(err => console.error("Erreur XP:", err));
+        });
     });
 });
 </script>
+
 
 
                 <!-- Informations du créateur -->
@@ -326,4 +331,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </body>
 
 </html>
+
 
