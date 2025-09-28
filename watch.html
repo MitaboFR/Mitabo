@@ -57,34 +57,63 @@
                 <h1 class="text-2xl font-bold mb-2">{{ video.title }}</h1>
                 <p class="text-gray-600 mb-4">{{ video.views|default(0) }} vues • {{ video.created_at.strftime('%d %b %Y') }}</p>
 
-                <!-- Actions (Like, Dislike, Partage) -->
-                <div class="flex items-center space-x-4 mb-6">
-                    <!-- Boutons Like/Dislike -->
-                    <div class="flex items-center bg-gray-200 rounded-full">
-                        <form method="POST" action="/video/like/{{ video.id }}" class="inline">
-                            <button type="submit" class="flex items-center px-4 py-2 rounded-l-full hover:bg-gray-300 transition-colors
-                                {% if user_like and user_like.is_like %}bg-blue-200 text-blue-700{% endif %}">
-                                <i class="fas fa-thumbs-up mr-2"></i>
-                                <span>{{ video.like_count }}</span>
-                            </button>flask routes
+<!-- Actions (Like, Dislike, XP, Partage) -->
+<div class="flex items-center space-x-4 mb-6">
 
-                        </form>
-                        <div class="w-px h-6 bg-gray-300"></div>
-                        <form method="POST" action="/video/dislike/{{ video.id }}" class="inline">
-                            <button type="submit" class="flex items-center px-4 py-2 rounded-r-full hover:bg-gray-300 transition-colors
-                                {% if user_like and not user_like.is_like %}bg-red-200 text-red-700{% endif %}">
-                                <i class="fas fa-thumbs-down mr-2"></i>
-                                <span>{{ video.dislike_count }}</span>
-                            </button>
-                        </form>
-                    </div>
+    <!-- Boutons Like/Dislike -->
+    <div class="flex items-center bg-gray-200 rounded-full">
+        <!-- Like -->
+        <form method="POST" action="/video/like/{{ video.id }}" class="inline">
+            <button type="submit" class="flex items-center px-4 py-2 rounded-l-full hover:bg-gray-300 transition-colors
+                {% if user_like and user_like.is_like %}bg-blue-200 text-blue-700{% endif %}">
+                <i class="fas fa-thumbs-up mr-2"></i>
+                <span>{{ video.like_count }}</span>
+            </button>
+        </form>
 
-                    <!-- Bouton Partage -->
-                    <button onclick="shareVideo()" class="flex items-center px-4 py-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
-                        <i class="fas fa-share mr-2"></i>
-                        Partager
-                    </button>
-                </div>
+        <div class="w-px h-6 bg-gray-300"></div>
+
+        <!-- Dislike -->
+        <form method="POST" action="/video/dislike/{{ video.id }}" class="inline">
+            <button type="submit" class="flex items-center px-4 py-2 rounded-r-full hover:bg-gray-300 transition-colors
+                {% if user_like and not user_like.is_like %}bg-red-200 text-red-700{% endif %}">
+                <i class="fas fa-thumbs-down mr-2"></i>
+                <span>{{ video.dislike_count }}</span>
+            </button>
+        </form>
+    </div>
+
+<!-- Bouton XP -->
+<button id="xp-button" 
+        data-video-id="{{ video.id }}" 
+        class="flex items-center px-4 py-2 bg-yellow-200 rounded-full hover:bg-yellow-300 transition-colors">
+    <i class="fas fa-star mr-2"></i>
+    <span id="xp-count">{{ video.xp or 0 }}</span> XP
+</button>
+
+    <!-- Bouton Partage -->
+    <button onclick="shareVideo()" 
+            class="flex items-center px-4 py-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
+        <i class="fas fa-share mr-2"></i>
+        Partager
+    </button>
+</div>
+
+<!-- Script pour le bouton XP -->
+<script>
+function giveXp(videoId) {
+    fetch(`/video/xp/${videoId}`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            if(data.xp !== undefined){
+                document.getElementById("xp-count").textContent = data.xp;
+            } else if(data.message){
+                alert(data.message);
+            }
+        })
+        .catch(err => console.error("Erreur XP:", err));
+}
+</script>
 
                 <!-- Informations du créateur -->
                 <div class="bg-white rounded-lg p-4 mb-6">
@@ -291,4 +320,5 @@
         }
     </style>
 </body>
+
 </html>
