@@ -12,17 +12,26 @@ from PIL import Image
 from sqlalchemy import text
 from models import Video, Like, Xp
 
+app = Flask(__name__)
+
+# ------------------------------
+# Configuration de la base de données
+# ------------------------------
+import os
+
+uri = os.getenv("DATABASE_URL")
+if uri and uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
+
 # ------------------------------
 # Configuration de l'application Flask
 # ------------------------------
 
-app = Flask(__name__)
-
 app.config.update(
-    SQLALCHEMY_DATABASE_URI=SQLALCHEMY_DATABASE_URI,
-    SQLALCHEMY_TRACK_MODIFICATIONS=SQLALCHEMY_TRACK_MODIFICATIONS,
+    SQLALCHEMY_DATABASE_URI=uri,
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SECRET_KEY="dev-mitabo-secret-key-change-in-production",
-    MAX_CONTENT_LENGTH=1024 * 1024 * 1024,  # 1 Go max pour les fichiers uploadés
+    MAX_CONTENT_LENGTH=1024 * 1024 * 1024,  # 1 Go max upload
     DEBUG=True,
 )
 
@@ -1116,6 +1125,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
