@@ -12,21 +12,24 @@ from PIL import Image
 from sqlalchemy import text
 from models import Video, Like, Xp
 
+# ------------------------------
+# Création de l'application Flask
+# ------------------------------
 app = Flask(__name__)
 
 # ------------------------------
 # Configuration de la base de données
 # ------------------------------
-import os
-
+# Récupère DATABASE_URL depuis les variables d'environnement
 uri = os.getenv("DATABASE_URL")
-if uri and uri.startswith("postgres://"):
+if not uri:
+    raise RuntimeError("DATABASE_URL not set! Configure it in Render environment variables.")
+
+# Remplace postgres:// par postgresql:// si nécessaire (SQLAlchemy >= 2.0)
+if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-# ------------------------------
-# Configuration de l'application Flask
-# ------------------------------
-
+# Configuration Flask
 app.config.update(
     SQLALCHEMY_DATABASE_URI=uri,
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
@@ -35,12 +38,18 @@ app.config.update(
     DEBUG=True,
 )
 
+# ------------------------------
 # Initialisation des extensions
+# ------------------------------
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
 
+# ------------------------------
 # Supabase Storage centralisé
+# ------------------------------
 from supabase_config import supabase, BUCKET_NAME
 
 # Initialisation de Flask-Login
@@ -1125,6 +1134,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
