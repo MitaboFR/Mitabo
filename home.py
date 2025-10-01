@@ -11,8 +11,7 @@ import shutil
 from PIL import Image
 from sqlalchemy import text
 from models import Video, Like, Xp
-from extensions import db  
-
+from extensions import db, migrate  # assure-toi que migrate est défini dans extensions.py
 # ------------------------------
 # Création de l'application Flask
 # ------------------------------
@@ -42,8 +41,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Initialisation DB
-.
-.
+# Initialisation DB et Migrate avec l'app
+db.init_app(app)
+migrate.init_app(app, db)
 
 
 # Configuration Flask
@@ -1164,6 +1164,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
