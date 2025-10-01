@@ -29,6 +29,22 @@ if not uri:
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
+#  Ajout SSL pour Supabase
+if "supabase.co" in uri:
+    if "?" in uri:
+        uri += "&sslmode=require"
+    else:
+        uri += "?sslmode=require"
+
+# Configuration SQLAlchemy
+app.config["SQLALCHEMY_DATABASE_URI"] = uri
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Initialisation DB
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+
 # Configuration Flask
 app.config.update(
     SQLALCHEMY_DATABASE_URI=uri,
@@ -1147,6 +1163,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
