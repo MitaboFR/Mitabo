@@ -706,16 +706,19 @@ def upload_form():
         print(f"Erreur dans upload_form(): {e}")
         return f"Erreur: {e}", 500
 
+
 @app.post("/upload")
 @login_required
 def upload_post():
     try:
         # --- Récupérer le fichier et infos ---
         f = request.files.get("file")
+        print("DEBUG: fichier reçu =", f.filename if f else None, "mimetype =", f.mimetype if f else None)
+
         title = (request.form.get("title") or "Sans titre").strip()
         description = (request.form.get("description") or "").strip()
         category = request.form.get("category") or "tendance"
-        creator = (request.form.get("creator") or current_user.display_name or "Anonyme").strip()
+        creator = (request.form.get("creator") or getattr(current_user, "display_name", "Anonyme")).strip()
         to_hls = request.form.get("to_hls") is not None
 
         if not f or f.filename == "":
@@ -737,16 +740,19 @@ def upload_post():
         file_path = os.path.join(UPLOAD_DIR, final)
         os.makedirs(UPLOAD_DIR, exist_ok=True)
         f.save(file_path)  # Sauvegarde locale
+        print("DEBUG: fichier sauvegardé =", file_path)
 
         # --- Upload vers Supabase ---
         with open(file_path, "rb") as file_data:
             res = supabase.storage.from_(BUCKET_NAME).upload(
                 f"videos/{final}",
                 file_data,
-                file_options={"content-type": f.mimetype}  # 👈 correction MIME type
+                {"content-type": f.mimetype}  # ✅ correction
             )
+        print("DEBUG: réponse Supabase =", res)
+
         public_url = None
-        if res.get("error"):
+        if isinstance(res, dict) and res.get("error"):
             flash(f"Erreur Supabase: {res['error']['message']}")
         else:
             public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")["publicUrl"]
@@ -761,7 +767,7 @@ def upload_post():
             duration="",
             creator=creator,
             user_id=current_user.id,
-            url=public_url  # Assure-toi que ton modèle Video a ce champ
+            url=public_url
         )
 
         # --- Transcodage HLS si demandé ---
@@ -774,7 +780,7 @@ def upload_post():
                 print(f"Erreur transcodage HLS: {e}")
                 flash("Transcodage HLS échoué — lecture MP4 directe utilisée.")
 
-        # --- Sauvegarder dans SQLite ---
+        # --- Sauvegarder dans DB ---
         db.session.add(v)
         db.session.commit()
 
@@ -782,6 +788,7 @@ def upload_post():
         return redirect(url_for("watch", video_id=v.id))
 
     except Exception as e:
+        import traceback; traceback.print_exc()
         print(f"Erreur dans upload_post(): {e}")
         flash(f"Erreur lors de l'upload: {e}")
         return redirect(url_for("upload_form"))
@@ -794,6 +801,7 @@ def media(filename):
     except Exception as e:
         print(f"Erreur dans media(): {e}")
         abort(404)
+
 
 @app.get("/hls/<path:filename>")
 def hls(filename):
@@ -1139,6 +1147,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
