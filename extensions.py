@@ -1,5 +1,5 @@
-from extensions import db, migrate  # assure-toi que migrate est défini dans extensions.py
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
-# Initialisation DB et Migrate avec l'app
-db.init_app(app)
-migrate.init_app(app, db)
+db = SQLAlchemy()
+migrate = Migrate()
