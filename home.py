@@ -740,7 +740,11 @@ def upload_post():
 
         # --- Upload vers Supabase ---
         with open(file_path, "rb") as file_data:
-            res = supabase.storage.from_(BUCKET_NAME).upload(f"videos/{final}", file_data)
+            res = supabase.storage.from_(BUCKET_NAME).upload(
+                f"videos/{final}",
+                file_data,
+                file_options={"content-type": f.mimetype}  # 👈 correction MIME type
+            )
         public_url = None
         if res.get("error"):
             flash(f"Erreur Supabase: {res['error']['message']}")
@@ -798,6 +802,7 @@ def hls(filename):
     except Exception as e:
         print(f"Erreur dans hls(): {e}")
         abort(404)
+
 
 # -------------------------
 # Authentification
@@ -1134,6 +1139,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
