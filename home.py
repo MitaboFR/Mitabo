@@ -11,6 +11,7 @@ import shutil
 from PIL import Image
 from sqlalchemy import text
 from models import Video, Like, Xp
+from extensions import db  
 
 # ------------------------------
 # Création de l'application Flask
@@ -1163,6 +1164,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
