@@ -10,7 +10,7 @@ import subprocess
 import shutil
 from PIL import Image
 from sqlalchemy import text
-from models import Video, Like, Xp
+from models import Video, Like, Xp, User
 from extensions import db, migrate  # assure-toi que migrate est défini dans extensions.py
 # ------------------------------
 # Création de l'application Flask
@@ -46,6 +46,8 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_size": 1,       # 1 connexion max
     "max_overflow": 0,    # pas de connexions supplémentaires
     "pool_timeout": 30,   # attente max 30s si occupé
+    "connect_args": {"sslmode": "require"}
+
 }
 
 # Initialisation DB
@@ -1086,6 +1088,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
