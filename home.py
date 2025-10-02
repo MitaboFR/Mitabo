@@ -17,6 +17,14 @@ from extensions import db, migrate  # assure-toi que migrate est défini dans ex
 # ------------------------------
 app = Flask(__name__)
 
+# Répertoire local pour stocker temporairement les fichiers uploadés
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+
+# Crée le dossier s'il n'existe pas
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
+
+
 # ------------------------------
 # Configuration de la base de données
 # ------------------------------
@@ -1088,6 +1096,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
