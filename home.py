@@ -40,6 +40,14 @@ if "supabase.co" in uri:
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+
+# ⚡ Limite du pool pour éviter l'erreur MaxClientsInSessionMode
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_size": 1,       # 1 connexion max
+    "max_overflow": 0,    # pas de connexions supplémentaires
+    "pool_timeout": 30,   # attente max 30s si occupé
+}
+
 # Initialisation DB
 # Initialisation DB et Migrate avec l'app
 db.init_app(app)
@@ -1078,6 +1086,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
