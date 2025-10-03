@@ -700,22 +700,28 @@ def upload_post():
         f.save(file_path)  # Sauvegarde locale
         print("DEBUG: fichier sauvegardé =", file_path)
 
-# --- Upload vers Supabase ---
-with open(file_path, "rb") as file_data:
-    res = supabase.storage.from_(BUCKET_NAME).upload(
-        f"videos/{final}",
-        file_data,
-        {"content-type": f.mimetype}
-    )
-print("DEBUG: réponse Supabase =", res)
+try:
+    # --- Upload vers Supabase ---
+    with open(file_path, "rb") as file_data:
+        res = supabase.storage.from_(BUCKET_NAME).upload(
+            f"videos/{final}",
+            file_data,
+            {"content-type": f.mimetype}
+        )
+    print("DEBUG: réponse Supabase =", res)
 
-public_url = None
-if isinstance(res, dict) and res.get("error"):
-    flash(f"Erreur Supabase: {res['error']['message']}")
-else:
-    public_url_res = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")
-    if isinstance(public_url_res, dict) and "publicUrl" in public_url_res:
-        public_url = public_url_res["publicUrl"]
+    public_url = None
+    if isinstance(res, dict) and res.get("error"):
+        flash(f"Erreur Supabase: {res['error']['message']}")
+    else:
+        public_url_res = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")
+        if isinstance(public_url_res, dict) and "publicUrl" in public_url_res:
+            public_url = public_url_res["publicUrl"]
+
+except Exception as e:
+    print(f"Erreur upload vers Supabase: {e}")
+    flash(f"Erreur lors de l'upload Supabase: {e}")
+
 
 
         # --- Créer l'objet Video ---
@@ -1108,6 +1114,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
