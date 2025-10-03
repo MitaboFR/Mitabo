@@ -116,6 +116,23 @@ CATEGORIES = [
     {"id": "jeux", "label": "Jeux"},
     {"id": "musique", "label": "Musique"},
     {"id": "film", "label": "Films & Anim"},
+
+        # Nouvelles catégories
+    {"id": "sports", "label": "Sports"},
+    {"id": "football", "label": "Football"},
+    {"id": "basket", "label": "Basket"},
+    {"id": "skateboard", "label": "Skateboard"},
+    {"id": "tennis", "label": "Tennis"},
+    {"id": "politique", "label": "Politique"},
+    {"id": "france", "label": "France"},
+    {"id": "alsace", "label": "Alsace"},
+    {"id": "paris", "label": "Paris"},
+    {"id": "iledefrance", "label": "Île de France"},
+    {"id": "grandest", "label": "Grand-Est"},
+    {"id": "actualite", "label": "Actualité"},
+    {"id": "divertissement", "label": "Divertissement"},
+    {"id": "usa", "label": "États-Unis"},
+    {"id": "ue", "label": "L'Union Européenne"},
 ]
 CATEGORIES_MAP = {c["id"]: c for c in CATEGORIES}
 ALLOWED_EXTENSIONS = {"mp4", "webm", "ogg", "mov", "m4v"}
@@ -1114,6 +1131,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
