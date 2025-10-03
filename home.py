@@ -642,6 +642,16 @@ def watch(video_id: int):
         return f"Erreur: {e}", 500
 
 # -------------------------
+# Dossiers de stockage
+# -------------------------
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+HLS_DIR = os.path.join(os.path.dirname(__file__), "hls")
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(HLS_DIR, exist_ok=True)
+
+
+# -------------------------
 # Upload + HLS
 # -------------------------
 @app.get("/upload")
@@ -690,20 +700,23 @@ def upload_post():
         f.save(file_path)  # Sauvegarde locale
         print("DEBUG: fichier sauvegardé =", file_path)
 
-        # --- Upload vers Supabase ---
-        with open(file_path, "rb") as file_data:
-            res = supabase.storage.from_(BUCKET_NAME).upload(
-                f"videos/{final}",
-                file_data,
-                {"content-type": f.mimetype}  # ✅ correction
-            )
-        print("DEBUG: réponse Supabase =", res)
+# --- Upload vers Supabase ---
+with open(file_path, "rb") as file_data:
+    res = supabase.storage.from_(BUCKET_NAME).upload(
+        f"videos/{final}",
+        file_data,
+        {"content-type": f.mimetype}
+    )
+print("DEBUG: réponse Supabase =", res)
 
-        public_url = None
-        if isinstance(res, dict) and res.get("error"):
-            flash(f"Erreur Supabase: {res['error']['message']}")
-        else:
-            public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")["publicUrl"]
+public_url = None
+if isinstance(res, dict) and res.get("error"):
+    flash(f"Erreur Supabase: {res['error']['message']}")
+else:
+    public_url_res = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")
+    if isinstance(public_url_res, dict) and "publicUrl" in public_url_res:
+        public_url = public_url_res["publicUrl"]
+
 
         # --- Créer l'objet Video ---
         v = Video(
@@ -1095,6 +1108,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
