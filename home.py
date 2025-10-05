@@ -210,7 +210,7 @@ def init_db():
                         external_url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
                         thumb_url="https://picsum.photos/seed/mitabo-demo/640/360",
                         duration="10:34",
-                        creator="Mitabo",
+                        creator="MitaboBigBuckBunny",
                         user_id=user.id,
                     )
                     db.session.add(demo)
@@ -754,6 +754,8 @@ v = Video(
     external_url=public_url  
 )
 
+db.session.add(v)
+db.session.commit()
 
         # --- Transcodage HLS si demandé ---
         if to_hls and ffmpeg_exists():
@@ -1132,6 +1134,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
