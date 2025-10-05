@@ -717,27 +717,65 @@ def upload_post():
         f.save(file_path)  # Sauvegarde locale
         print("DEBUG: fichier sauvegardé =", file_path)
 
-try:
-    # --- Upload vers Supabase ---
-    with open(file_path, "rb") as file_data:
-        res = supabase.storage.from_(BUCKET_NAME).upload(
-            f"videos/{final}",
-            file_data,
-            {"content-type": f.mimetype}
+        # --- Upload vers Supabase ---
+        public_url = None
+        try:
+            with open(file_path, "rb") as file_data:
+                res = supabase.storage.from_(BUCKET_NAME).upload(
+                    f"videos/{final}",
+                    file_data,
+                    {"content-type": f.mimetype}
+                )
+            print("DEBUG: réponse Supabase =", res)
+
+            if isinstance(res, dict) and res.get("error"):
+                flash(f"Erreur Supabase: {res['error']['message']}")
+            else:
+                public_url_res = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")
+                if isinstance(public_url_res, dict) and "publicUrl" in public_url_res:
+                    public_url = public_url_res["publicUrl"]
+
+        except Exception as e:
+            print(f"Erreur upload vers Supabase: {e}")
+            flash(f"Erreur lors de l'upload Supabase: {e}")
+
+        # --- Créer l'objet Video ---
+        v = Video(
+            title=title,
+            description=description,
+            category=category if category in CATEGORIES_MAP else "tendance",
+            filename=final,
+            thumb_url=f"https://picsum.photos/seed/mitabo-{base}/640/360",
+            duration="",
+            creator=creator,
+            user_id=current_user.id,
+            external_url=public_url
         )
-    print("DEBUG: réponse Supabase =", res)
 
-    public_url = None
-    if isinstance(res, dict) and res.get("error"):
-        flash(f"Erreur Supabase: {res['error']['message']}")
-    else:
-        public_url_res = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")
-        if isinstance(public_url_res, dict) and "publicUrl" in public_url_res:
-            public_url = public_url_res["publicUrl"]
+        db.session.add(v)
+        db.session.commit()
 
-except Exception as e:
-    print(f"Erreur upload vers Supabase: {e}")
-    flash(f"Erreur lors de l'upload Supabase: {e}")
+        # --- Transcodage HLS si demandé ---
+        if to_hls and ffmpeg_exists():
+            target_dir = os.path.join(HLS_DIR, f"video_{datetime.utcnow().timestamp():.0f}")
+            try:
+                rel_master = transcode_to_hls(file_path, target_dir)
+                v.hls_manifest = rel_master
+            except Exception as e:
+                print(f"Erreur transcodage HLS: {e}")
+                flash("Transcodage HLS échoué — lecture MP4 directe utilisée.")
+
+        db.session.add(v)
+        db.session.commit()
+
+        flash("Vidéo uploadée avec succès !")
+        return redirect(url_for("watch", video_id=v.id))
+
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        print(f"Erreur dans upload_post(): {e}")
+        flash(f"Erreur lors de l'upload: {e}")
+        return redirect(url_for("upload_form"))
 
 
 
@@ -1135,6 +1173,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
