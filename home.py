@@ -741,6 +741,7 @@ except Exception as e:
 
 
 
+
         # --- Créer l'objet Video ---
 v = Video(
     title=title,
@@ -1134,6 +1135,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
