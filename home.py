@@ -12,6 +12,7 @@ from PIL import Image
 from sqlalchemy import text
 from models import Video, Like, Xp, User
 from extensions import db, migrate  # assure-toi que migrate est défini dans extensions.py
+
 # ------------------------------
 # Création de l'application Flask
 # ------------------------------
@@ -19,77 +20,57 @@ app = Flask(__name__)
 
 # Répertoire local pour stocker temporairement les fichiers uploadés
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
-
-# Crée le dossier s'il n'existe pas
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
 # ------------------------------
 # Configuration de la base de données
 # ------------------------------
-# Récupère DATABASE_URL depuis les variables d'environnement
 uri = os.getenv("DATABASE_URL")
 if not uri:
     raise RuntimeError("DATABASE_URL not set! Configure it in Render environment variables.")
 
-# Remplace postgres:// par postgresql:// si nécessaire (SQLAlchemy >= 2.0)
+# Corrige l'ancien format postgres://
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-#  Ajout SSL pour Supabase
-if "supabase.co" in uri:
+# Force SSL pour Supabase si nécessaire
+if "supabase.co" in uri and "sslmode=" not in uri:
     if "?" in uri:
         uri += "&sslmode=require"
     else:
         uri += "?sslmode=require"
 
-# Configuration SQLAlchemy
-app.config["SQLALCHEMY_DATABASE_URI"] = uri
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-
-# ⚡ Limite du pool pour éviter l'erreur MaxClientsInSessionMode
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    "pool_size": 1,       # 1 connexion max
-    "max_overflow": 0,    # pas de connexions supplémentaires
-    "pool_timeout": 30,   # attente max 30s si occupé
-    "connect_args": {"sslmode": "require"}
-
-}
-
-# Initialisation DB
-# Initialisation DB et Migrate avec l'app
-db.init_app(app)
-migrate.init_app(app, db)
-
-
-# Configuration Flask
+# Configuration SQLAlchemy + app
 app.config.update(
     SQLALCHEMY_DATABASE_URI=uri,
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SECRET_KEY="dev-mitabo-secret-key-change-in-production",
     MAX_CONTENT_LENGTH=1024 * 1024 * 1024,  # 1 Go max upload
     DEBUG=True,
+    SQLALCHEMY_ENGINE_OPTIONS={
+        "pool_size": 1,        # Limite stricte pour Render
+        "max_overflow": 0,
+        "pool_timeout": 30,
+        "connect_args": {"sslmode": "require"}
+    }
 )
+
+# Initialisation DB et Migrate avec l'app
+db.init_app(app)
+migrate.init_app(app, db)
 
 # ------------------------------
 # Initialisation des extensions
 # ------------------------------
-
-
-
-login_manager = LoginManager(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 login_manager.login_view = "login"
 
 # ------------------------------
 # Supabase Storage centralisé
 # ------------------------------
 from supabase_config import supabase, BUCKET_NAME
-
-# Initialisation de Flask-Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = "login"
 
 
 
@@ -1173,6 +1154,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
