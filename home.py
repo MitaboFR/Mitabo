@@ -695,7 +695,7 @@ def upload_post():
 
         file_path = os.path.join(UPLOAD_DIR, final)
         os.makedirs(UPLOAD_DIR, exist_ok=True)
-        f.save(file_path)  # Sauvegarde locale
+        f.save(file_path)
         print("DEBUG: fichier sauvegardé =", file_path)
 
         # --- Upload vers Supabase ---
@@ -733,50 +733,6 @@ def upload_post():
             external_url=public_url
         )
 
-        db.session.add(v)
-        db.session.commit()
-
-        # --- Transcodage HLS si demandé ---
-        if to_hls and ffmpeg_exists():
-            target_dir = os.path.join(HLS_DIR, f"video_{datetime.utcnow().timestamp():.0f}")
-            try:
-                rel_master = transcode_to_hls(file_path, target_dir)
-                v.hls_manifest = rel_master
-            except Exception as e:
-                print(f"Erreur transcodage HLS: {e}")
-                flash("Transcodage HLS échoué — lecture MP4 directe utilisée.")
-
-        db.session.add(v)
-        db.session.commit()
-
-        flash("Vidéo uploadée avec succès !")
-        return redirect(url_for("watch", video_id=v.id))
-
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        print(f"Erreur dans upload_post(): {e}")
-        flash(f"Erreur lors de l'upload: {e}")
-        return redirect(url_for("upload_form"))
-
-
-
-
-        # --- Créer l'objet Video ---
-v = Video(
-    title=title,
-    description=description,
-    category=category if category in CATEGORIES_MAP else "tendance",
-    filename=final,
-    thumb_url=f"https://picsum.photos/seed/mitabo-{base}/640/360",
-    duration="",
-    creator=creator,
-    user_id=current_user.id,
-    external_url=public_url  
-)
-
-db.session.add(v)
-db.session.commit()
-
         # --- Transcodage HLS si demandé ---
         if to_hls and ffmpeg_exists():
             target_dir = os.path.join(HLS_DIR, f"video_{datetime.utcnow().timestamp():.0f}")
@@ -799,15 +755,6 @@ db.session.commit()
         print(f"Erreur dans upload_post(): {e}")
         flash(f"Erreur lors de l'upload: {e}")
         return redirect(url_for("upload_form"))
-
-
-@app.get("/media/<path:filename>")
-def media(filename):
-    try:
-        return send_from_directory(UPLOAD_DIR, filename, as_attachment=False)
-    except Exception as e:
-        print(f"Erreur dans media(): {e}")
-        abort(404)
 
 
 @app.get("/hls/<path:filename>")
@@ -1154,6 +1101,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
