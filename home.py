@@ -1,9 +1,15 @@
 import os
 import time
-from flask import Flask, request, render_template_string, url_for, redirect, send_from_directory, abort, jsonify, flash, send_file
+from flask import (
+    Flask, request, render_template_string, url_for, redirect,
+    send_from_directory, abort, jsonify, flash, send_file
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_login import (
+    LoginManager, UserMixin, login_user, login_required,
+    logout_user, current_user
+)
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -14,7 +20,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
 # ⚡ Import extensions AVANT les modèles
-from extensions import db, migrate  # migrate doit être défini dans extensions.py
+from extensions import db, migrate  # doit exister dans extensions.py
 
 # ------------------------------
 # Création de l'application Flask
@@ -52,7 +58,7 @@ app.config.update(
     MAX_CONTENT_LENGTH=1024 * 1024 * 1024,  # 1 Go max upload
     DEBUG=True,
     SQLALCHEMY_ENGINE_OPTIONS={
-        "pool_size": 1,        # Limite stricte pour Render
+        "pool_size": 1,
         "max_overflow": 0,
         "pool_timeout": 30,
         "pool_pre_ping": True,
@@ -86,21 +92,91 @@ with app.app_context():
     else:
         raise RuntimeError("❌ Impossible de se connecter à la base après plusieurs tentatives")
 
-
 # ------------------------------
-# Initialisation des extensions
+# Initialisation LoginManager
 # ------------------------------
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 # ------------------------------
 # Supabase Storage centralisé
 # ------------------------------
 from supabase_config import supabase, BUCKET_NAME
 
+# ------------------------------
+# Routes Authentification
+# ------------------------------
 
+# Page d'inscription
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
 
+        if not username or not password:
+            flash("Veuillez remplir tous les champs.")
+            return redirect(url_for("register"))
+
+        existing = User.query.filter_by(display_name=username).first()
+        if existing:
+            flash("Ce nom d'utilisateur existe déjà.")
+            return redirect(url_for("register"))
+
+        hashed = generate_password_hash(password)
+        new_user = User(display_name=username, password_hash=hashed)
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash("✅ Inscription réussie, vous pouvez vous connecter.")
+        return redirect(url_for("login"))
+
+    return render_template_string("""
+    <h1>Inscription</h1>
+    <form method="POST">
+      <input name="username" placeholder="Nom d'utilisateur" required><br>
+      <input name="password" type="password" placeholder="Mot de passe" required><br>
+      <button type="submit">S'inscrire</button>
+    </form>
+    """)
+
+# Page de connexion
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        user = User.query.filter_by(display_name=username).first()
+        if not user or not check_password_hash(user.password_hash, password):
+            flash("Nom d'utilisateur ou mot de passe incorrect.")
+            return redirect(url_for("login"))
+
+        login_user(user)
+        flash(f"Bienvenue, {user.display_name} 👋")
+        return redirect(url_for("index"))
+
+    return render_template_string("""
+    <h1>Connexion</h1>
+    <form method="POST">
+      <input name="username" placeholder="Nom d'utilisateur" required><br>
+      <input name="password" type="password" placeholder="Mot de passe" required><br>
+      <button type="submit">Se connecter</button>
+    </form>
+    """)
+
+# Déconnexion
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("Vous êtes déconnecté.")
+    return redirect(url_for("login"))
 
 # ------------------------------
 # Création automatique des tables (Render inclus)
@@ -1128,6 +1204,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
