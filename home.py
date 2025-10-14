@@ -12,8 +12,9 @@ import shutil
 from PIL import Image
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
-from models import Video, Like, Xp, User
-from extensions import db, migrate  # assure-toi que migrate est défini dans extensions.py
+
+# ⚡ Import extensions AVANT les modèles
+from extensions import db, migrate  # migrate doit être défini dans extensions.py
 
 # ------------------------------
 # Création de l'application Flask
@@ -54,14 +55,23 @@ app.config.update(
         "pool_size": 1,        # Limite stricte pour Render
         "max_overflow": 0,
         "pool_timeout": 30,
-        "pool_pre_ping": True,     # ✅ pour garder les connexions vivantes
-        "pool_recycle": 1800,      # ✅ recycle toutes les 30 min
+        "pool_pre_ping": True,
+        "pool_recycle": 1800,
         "connect_args": {"sslmode": "require"}
     }
 )
 
 # ------------------------------
-# ✅ Bloc retry connexion DB au démarrage (important pour Render)
+# Initialisation DB et Migrate avec l'app
+# ------------------------------
+db.init_app(app)
+migrate.init_app(app, db)
+
+# ✅ Import des modèles APRÈS l'initialisation
+from models import Video, Like, Xp, User
+
+# ------------------------------
+# Bloc retry connexion DB au démarrage (important pour Render)
 # ------------------------------
 with app.app_context():
     retries = 5
@@ -76,10 +86,6 @@ with app.app_context():
     else:
         raise RuntimeError("❌ Impossible de se connecter à la base après plusieurs tentatives")
 
-
-# Initialisation DB et Migrate avec l'app
-db.init_app(app)
-migrate.init_app(app, db)
 
 # ------------------------------
 # Initialisation des extensions
@@ -1122,6 +1128,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
