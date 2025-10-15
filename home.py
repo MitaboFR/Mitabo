@@ -869,78 +869,7 @@ def hls(filename):
         abort(404)
 
 
-# -------------------------
-# Authentification
-# -------------------------
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    try:
-        if request.method == "POST":
-            email = request.form.get("email", "").strip().lower()
-            password = request.form.get("password", "")
 
-            # Recherche de l'utilisateur
-            u = User.query.filter_by(email=email).first()
-
-            if not u or not u.check_password(password):
-                flash("Identifiants invalides")
-            else:
-                login_user(u)
-                return redirect(url_for("home"))
-
-        # Affichage du formulaire de connexion
-        body = render_template_string(
-            AUTH_BODY,
-            heading="Connexion",
-            cta="Se connecter",
-            mode="login"
-        )
-        return render_template_string(
-            BASE_HTML,
-            body=body,
-            year=datetime.utcnow().year,
-            title="Connexion — Mitabo"
-        )
-
-    except Exception as e:
-        # Log de l'erreur et retour 500
-        print(f"Erreur dans login(): {e}")
-        return f"Erreur: {e}", 500
-
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    try:
-        if request.method == "POST":
-            display_name = (request.form.get("display_name") or "").strip()
-            email = (request.form.get("email") or "").strip().lower()
-            password = request.form.get("password") or ""
-            if not display_name or not email or not password:
-                flash("Tous les champs sont requis")
-            elif User.query.filter_by(email=email).first():
-                flash("Cet email est déjà utilisé")
-            else:
-                u = User(email=email, display_name=display_name)
-                u.set_password(password)
-                db.session.add(u)
-                db.session.commit()
-                login_user(u)
-                return redirect(url_for("home"))
-        body = render_template_string(AUTH_BODY, heading="Créer un compte", cta="S'inscrire", mode="register")
-        return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Inscription — Mitabo")
-    except Exception as e:
-        print(f"Erreur dans register(): {e}")
-        return f"Erreur: {e}", 500
-
-@app.get("/logout")
-@login_required
-def logout():
-    try:
-        logout_user()
-        return redirect(url_for("home"))
-    except Exception as e:
-        print(f"Erreur dans logout(): {e}")
-        return redirect(url_for("home"))
 
 # -------------------------
 # Commentaires
@@ -1204,6 +1133,7 @@ if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
     from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
+
 
 
 
