@@ -23,14 +23,19 @@ from sqlalchemy.exc import OperationalError
 from extensions import db, migrate  # doit exister dans extensions.py
 
 # ------------------------------
+# Configuration des répertoires
+# ------------------------------
+BASE_DIR = os.path.dirname(__file__)
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+HLS_DIR = os.path.join(BASE_DIR, "hls")
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(HLS_DIR, exist_ok=True)
+
+# ------------------------------
 # Création de l'application Flask
 # ------------------------------
 app = Flask(__name__)
-
-# Répertoire local pour stocker temporairement les fichiers uploadés
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
 
 # ------------------------------
 # Configuration de la base de données
@@ -74,7 +79,7 @@ db.init_app(app)
 migrate.init_app(app, db)
 
 # ✅ Import des modèles APRÈS l'initialisation
-from models import Video, Like, Xp, User
+from models import Video, Like, Xp, User, Follow, Comment
 
 # ------------------------------
 # Bloc retry connexion DB au démarrage (important pour Render)
@@ -109,88 +114,10 @@ def load_user(user_id):
 from supabase_config import supabase, BUCKET_NAME
 
 # ------------------------------
-# Routes Authentification
-# ------------------------------
-
-# Page d'inscription
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-
-        if not username or not password:
-            flash("Veuillez remplir tous les champs.")
-            return redirect(url_for("register"))
-
-        existing = User.query.filter_by(display_name=username).first()
-        if existing:
-            flash("Ce nom d'utilisateur existe déjà.")
-            return redirect(url_for("register"))
-
-        hashed = generate_password_hash(password)
-        new_user = User(display_name=username, password_hash=hashed)
-        db.session.add(new_user)
-        db.session.commit()
-
-        flash("✅ Inscription réussie, vous pouvez vous connecter.")
-        return redirect(url_for("login"))
-
-    return render_template_string("""
-    <h1>Inscription</h1>
-    <form method="POST">
-      <input name="username" placeholder="Nom d'utilisateur" required><br>
-      <input name="password" type="password" placeholder="Mot de passe" required><br>
-      <button type="submit">S'inscrire</button>
-    </form>
-    """)
-
-# Page de connexion
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-
-        user = User.query.filter_by(display_name=username).first()
-        if not user or not check_password_hash(user.password_hash, password):
-            flash("Nom d'utilisateur ou mot de passe incorrect.")
-            return redirect(url_for("login"))
-
-        login_user(user)
-        flash(f"Bienvenue, {user.display_name} 👋")
-        return redirect(url_for("index"))
-
-    return render_template_string("""
-    <h1>Connexion</h1>
-    <form method="POST">
-      <input name="username" placeholder="Nom d'utilisateur" required><br>
-      <input name="password" type="password" placeholder="Mot de passe" required><br>
-      <button type="submit">Se connecter</button>
-    </form>
-    """)
-
-# Déconnexion
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    flash("Vous êtes déconnecté.")
-    return redirect(url_for("login"))
-
-# ------------------------------
 # Création automatique des tables (Render inclus)
 # ------------------------------
 with app.app_context():
     db.create_all()
-
-# ------------------------------
-# Lancement en local
-# ------------------------------
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
-
-
 
 # -------------------------
 # Données constantes
@@ -200,8 +127,6 @@ CATEGORIES = [
     {"id": "jeux", "label": "Jeux"},
     {"id": "musique", "label": "Musique"},
     {"id": "film", "label": "Films & Anim"},
-
-        # Nouvelles catégories
     {"id": "sports", "label": "Sports"},
     {"id": "football", "label": "Football"},
     {"id": "basket", "label": "Basket"},
@@ -220,13 +145,6 @@ CATEGORIES = [
 ]
 CATEGORIES_MAP = {c["id"]: c for c in CATEGORIES}
 ALLOWED_EXTENSIONS = {"mp4", "webm", "ogg", "mov", "m4v"}
-
-# -------------------------
-# Login manager
-# -------------------------
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 
 # -------------------------
 # Utils
@@ -336,7 +254,7 @@ BASE_HTML = """<!DOCTYPE html>
         {% if messages %}
             <div class="container mx-auto px-4 py-2">
                 {% for message in messages %}
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{{ message }}</div>
+                    <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">{{ message }}</div>
                 {% endfor %}
             </div>
         {% endif %}
@@ -360,10 +278,10 @@ HOME_BODY = """
             <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg">Rechercher</button>
         </form>
         
-        <div class="flex gap-2">
+        <div class="flex gap-2 overflow-x-auto">
             {% for cat in categories %}
                 <a href="?cat={{ cat.id }}&q={{ q }}" 
-                   class="px-4 py-2 rounded-lg {% if cat.id == active_cat %}bg-blue-500 text-white{% else %}bg-gray-200{% endif %}">
+                   class="px-4 py-2 rounded-lg whitespace-nowrap {% if cat.id == active_cat %}bg-blue-500 text-white{% else %}bg-gray-200{% endif %}">
                     {{ cat.label }}
                 </a>
             {% endfor %}
@@ -372,7 +290,7 @@ HOME_BODY = """
     
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {% for video in items %}
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition">
                 <a href="{{ url_for('watch', video_id=video.id) }}">
                     {% if video.thumb_url %}
                         <img src="{{ video.thumb_url }}" alt="{{ video.title }}" class="w-full h-48 object-cover">
@@ -420,39 +338,25 @@ WATCH_BODY = """
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                  <div class="flex items-center space-x-2">
-    <!-- Like -->
-    <button onclick="likeVideo({{ video.id }})" 
-            class="flex items-center space-x-1 px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
-        <span>👍</span>
-        <span id="likes-count">{{ video.likes or 0 }}</span>
-    </button>
+                <div class="flex items-center space-x-2">
+                    <button onclick="likeVideo({{ video.id }})" 
+                            class="flex items-center space-x-1 px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
+                        <span>👍</span>
+                        <span id="likes-count">{{ video.likes or 0 }}</span>
+                    </button>
 
-    <!-- Dislike -->
-    <button onclick="dislikeVideo({{ video.id }})" 
-            class="flex items-center space-x-1 px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
-        <span>👎</span>
-        <span id="dislikes-count">{{ video.dislikes or 0 }}</span>
-    </button>
+                    <button onclick="dislikeVideo({{ video.id }})" 
+                            class="flex items-center space-x-1 px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
+                        <span>👎</span>
+                        <span id="dislikes-count">{{ video.dislikes or 0 }}</span>
+                    </button>
 
-    <!-- XP -->
-    <button onclick="giveXp({{ video.id }})" 
-            class="flex items-center space-x-1 px-3 py-1 rounded bg-yellow-200 hover:bg-yellow-300">
-        <span>✨ XP</span>
-        <span id="xp-count">{{ video.xp or 0 }}</span>
-    </button>
-</div>
-
-<script>
-function giveXp(videoId) {
-    fetch(`/video/${videoId}/xp`, { method: "POST" })
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById("xp-count").textContent = data.xp;
-        });
-}
-</script>
-
+                    <button onclick="giveXp({{ video.id }})" 
+                            class="flex items-center space-x-1 px-3 py-1 rounded bg-yellow-200 hover:bg-yellow-300">
+                        <span>✨ XP</span>
+                        <span id="xp-count">{{ video.xp or 0 }}</span>
+                    </button>
+                </div>
                 {% endif %}
             </div>
             
@@ -488,7 +392,7 @@ function giveXp(videoId) {
         <div class="space-y-4">
             <h3 class="font-semibold text-lg">Suggestions</h3>
             {% for suggestion in more %}
-                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition">
                     <a href="{{ url_for('watch', video_id=suggestion.id) }}">
                         {% if suggestion.thumb_url %}
                             <img src="{{ suggestion.thumb_url }}" alt="{{ suggestion.title }}" 
@@ -533,6 +437,15 @@ function dislikeVideo(videoId) {
             document.getElementById('dislikes-count').textContent = data.dislikes;
         })
         .catch(err => console.error('Erreur dislike:', err));
+}
+
+function giveXp(videoId) {
+    fetch(`/video/${videoId}/xp`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("xp-count").textContent = data.xp;
+        })
+        .catch(err => console.error('Erreur XP:', err));
 }
 
 // HLS support
@@ -595,7 +508,7 @@ UPLOAD_BODY = """
                 </label>
             </div>
             
-            <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg">
+            <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
                 Téléverser
             </button>
         </div>
@@ -628,7 +541,7 @@ AUTH_BODY = """
                    class="w-full px-3 py-2 border rounded-lg">
         </div>
         
-        <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-lg">
+        <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">
             {{ cta }}
         </button>
     </form>
@@ -645,10 +558,19 @@ AUTH_BODY = """
 
 PROFIL_BODY = """
 <main class="container mx-auto px-4 py-8">
-    <h1 class="text-xl font-semibold mb-4">Profil de {{ user.display_name }}</h1>
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-xl font-semibold">Profil de {{ user.display_name }}</h1>
+        {% if current_user.is_authenticated and current_user.id != user.id %}
+        <button onclick="followUser({{ user.id }})" id="follow-btn" 
+                class="px-4 py-2 rounded {% if is_following %}bg-gray-300{% else %}bg-blue-500 text-white{% endif %}">
+            {% if is_following %}Abonné{% else %}S'abonner{% endif %}
+        </button>
+        {% endif %}
+    </div>
+    
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for v in videos %}
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition">
                 <a href="{{ url_for('watch', video_id=v.id) }}">
                     {% if v.thumb_url %}
                         <img src="{{ v.thumb_url }}" alt="{{ v.title }}" class="w-full h-48 object-cover">
@@ -668,7 +590,80 @@ PROFIL_BODY = """
         {% endfor %}
     </div>
 </main>
+
+<script>
+function followUser(userId) {
+    fetch(`/follow/${userId}`, {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            const btn = document.getElementById('follow-btn');
+            if (data.following) {
+                btn.textContent = 'Abonné';
+                btn.className = 'px-4 py-2 rounded bg-gray-300';
+            } else {
+                btn.textContent = "S'abonner";
+                btn.className = 'px-4 py-2 rounded bg-blue-500 text-white';
+            }
+        })
+        .catch(err => console.error('Erreur follow:', err));
+}
+</script>
 """
+
+# -------------------------
+# Routes Authentification
+# -------------------------
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        if not username or not password:
+            flash("Veuillez remplir tous les champs.")
+            return redirect(url_for("register"))
+
+        existing = User.query.filter_by(display_name=username).first()
+        if existing:
+            flash("Ce nom d'utilisateur existe déjà.")
+            return redirect(url_for("register"))
+
+        hashed = generate_password_hash(password)
+        new_user = User(display_name=username, password_hash=hashed)
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash("✅ Inscription réussie, vous pouvez vous connecter.")
+        return redirect(url_for("login"))
+
+    body = render_template_string(AUTH_BODY, mode='register', heading='Inscription', cta='S\'inscrire')
+    return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Inscription")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        user = User.query.filter_by(display_name=username).first()
+        if not user or not check_password_hash(user.password_hash, password):
+            flash("Nom d'utilisateur ou mot de passe incorrect.")
+            return redirect(url_for("login"))
+
+        login_user(user)
+        flash(f"Bienvenue, {user.display_name} 👋")
+        return redirect(url_for("home"))
+
+    body = render_template_string(AUTH_BODY, mode='login', heading='Connexion', cta='Se connecter')
+    return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Connexion")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("Vous êtes déconnecté.")
+    return redirect(url_for("login"))
 
 # -------------------------
 # Routes principales
@@ -721,7 +716,6 @@ def watch(video_id: int):
             .all()
         )
 
-        # Récupération des commentaires avec jointure correcte
         comments = (
             Comment.query
             .filter(Comment.video_id == v.id)
@@ -743,16 +737,6 @@ def watch(video_id: int):
         return f"Erreur: {e}", 500
 
 # -------------------------
-# Dossiers de stockage
-# -------------------------
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
-HLS_DIR = os.path.join(os.path.dirname(__file__), "hls")
-
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(HLS_DIR, exist_ok=True)
-
-
-# -------------------------
 # Upload + HLS
 # -------------------------
 @app.get("/upload")
@@ -765,12 +749,10 @@ def upload_form():
         print(f"Erreur dans upload_form(): {e}")
         return f"Erreur: {e}", 500
 
-
 @app.post("/upload")
 @login_required
 def upload_post():
     try:
-        # --- Récupérer le fichier et infos ---
         f = request.files.get("file")
         print("DEBUG: fichier reçu =", f.filename if f else None, "mimetype =", f.mimetype if f else None)
 
@@ -787,7 +769,6 @@ def upload_post():
             flash("Extension non supportée")
             return redirect(url_for("upload_form"))
 
-        # --- Préparer le fichier ---
         filename = secure_filename(f.filename)
         base, ext = os.path.splitext(filename)
         counter = 1
@@ -801,7 +782,6 @@ def upload_post():
         f.save(file_path)
         print("DEBUG: fichier sauvegardé =", file_path)
 
-        # --- Upload vers Supabase ---
         public_url = None
         try:
             with open(file_path, "rb") as file_data:
@@ -823,7 +803,6 @@ def upload_post():
             print(f"Erreur upload vers Supabase: {e}")
             flash(f"Erreur lors de l'upload Supabase: {e}")
 
-        # --- Créer l'objet Video ---
         v = Video(
             title=title,
             description=description,
@@ -836,7 +815,6 @@ def upload_post():
             external_url=public_url
         )
 
-        # --- Transcodage HLS si demandé ---
         if to_hls and ffmpeg_exists():
             target_dir = os.path.join(HLS_DIR, f"video_{datetime.utcnow().timestamp():.0f}")
             try:
@@ -846,7 +824,6 @@ def upload_post():
                 print(f"Erreur transcodage HLS: {e}")
                 flash("Transcodage HLS échoué — lecture MP4 directe utilisée.")
 
-        # --- Sauvegarder dans DB ---
         db.session.add(v)
         db.session.commit()
 
@@ -854,11 +831,11 @@ def upload_post():
         return redirect(url_for("watch", video_id=v.id))
 
     except Exception as e:
-        import traceback; traceback.print_exc()
+        import traceback
+        traceback.print_exc()
         print(f"Erreur dans upload_post(): {e}")
         flash(f"Erreur lors de l'upload: {e}")
         return redirect(url_for("upload_form"))
-
 
 @app.get("/hls/<path:filename>")
 def hls(filename):
@@ -867,9 +844,6 @@ def hls(filename):
     except Exception as e:
         print(f"Erreur dans hls(): {e}")
         abort(404)
-
-
-
 
 # -------------------------
 # Commentaires
@@ -952,11 +926,9 @@ def like_video(video_id):
         existing = Like.query.filter_by(user_id=current_user.id, video_id=v.id).first()
         if existing:
             if existing.is_like:
-                # déjà liké -> supprimer le like (toggle)
                 db.session.delete(existing)
                 v.likes = max((v.likes or 1) - 1, 0)
             else:
-                # transform dislike -> like
                 existing.is_like = True
                 v.likes = (v.likes or 0) + 1
                 v.dislikes = max((v.dislikes or 1) - 1, 0)
@@ -993,6 +965,23 @@ def dislike_video(video_id):
         return jsonify({"likes": v.likes, "dislikes": v.dislikes})
     except Exception as e:
         print(f"Erreur dans dislike_video(): {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/video/<int:video_id>/xp", methods=["POST"])
+@login_required
+def give_xp(video_id):
+    try:
+        v = Video.query.get_or_404(video_id)
+        
+        existing = Xp.query.filter_by(user_id=current_user.id, video_id=v.id).first()
+        if not existing:
+            db.session.add(Xp(user_id=current_user.id, video_id=v.id))
+            v.xp = (v.xp or 0) + 1
+            db.session.commit()
+        
+        return jsonify({"xp": v.xp})
+    except Exception as e:
+        print(f"Erreur dans give_xp(): {e}")
         return jsonify({"error": str(e)}), 500
 
 # -------------------------
@@ -1055,7 +1044,7 @@ def ban_user(user_id):
             return redirect(url_for("home"))
         
         user = User.query.get_or_404(user_id)
-        if user.id != current_user.id:  # Éviter de se bannir soi-même
+        if user.id != current_user.id:
             db.session.delete(user)
             db.session.commit()
             flash(f"Utilisateur {user.display_name} banni")
@@ -1091,15 +1080,12 @@ def promote_user(user_id):
 @app.route('/favicon.ico')
 def favicon():
     try:
-        # Créer le favicon s'il n'existe pas
         favicon_path = os.path.join(BASE_DIR, "favicon.ico")
         if not os.path.exists(favicon_path):
-            # Créer un favicon simple
             img = Image.new('RGB', (32, 32), color='blue')
             img.save(favicon_path, format="ICO")
         return send_file(favicon_path, mimetype='image/x-icon')
     except Exception:
-        # Retourner une réponse vide si erreur
         return '', 204
 
 # -------------------------
@@ -1128,11 +1114,8 @@ def init_database():
 # Entrée app
 # -------------------------
 if __name__ == "__main__":
-    # Initialiser la DB au démarrage
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
-    from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, send_file, abort, jsonify
-from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 
 
 
