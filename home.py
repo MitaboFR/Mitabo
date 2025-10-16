@@ -521,17 +521,9 @@ AUTH_BODY = """
     <h1 class="text-2xl font-bold text-center mb-6">{{ heading }}</h1>
     
     <form method="post" class="space-y-4">
-        {% if mode == 'register' %}
-            <div>
-                <label class="block text-sm font-medium mb-1">Nom d'affichage</label>
-                <input name="display_name" type="text" required 
-                       class="w-full px-3 py-2 border rounded-lg">
-            </div>
-        {% endif %}
-        
         <div>
-            <label class="block text-sm font-medium mb-1">Email</label>
-            <input name="email" type="email" required 
+            <label class="block text-sm font-medium mb-1">Nom d'utilisateur</label>
+            <input name="username" type="text" required 
                    class="w-full px-3 py-2 border rounded-lg">
         </div>
         
