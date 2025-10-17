@@ -839,6 +839,15 @@ def hls(filename):
         print(f"Erreur dans hls(): {e}")
         abort(404)
 
+@app.get("/media/<path:filename>")
+def media(filename):
+    """Route pour servir les fichiers vidéo uploadés localement"""
+    try:
+        return send_from_directory(UPLOAD_DIR, filename, as_attachment=False)
+    except Exception as e:
+        print(f"Erreur dans media(): {e}")
+        abort(404)
+
 # -------------------------
 # Commentaires
 # -------------------------
@@ -1110,6 +1119,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
