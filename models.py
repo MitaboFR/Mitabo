@@ -12,12 +12,13 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     display_name = db.Column(db.String(120), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_admin = db.Column(db.Boolean, default=False)
     
     # Relations
     videos = db.relationship('Video', backref='user', lazy=True)
     comments = db.relationship('Comment', backref='user', lazy=True)
     likes = db.relationship('Like', backref='user', lazy=True)
-    xps = db.relationship('Xp', backref='user', lazy=True)   # 👈 ajout
+    xps = db.relationship('Xp', backref='user', lazy=True)
 
     # Suivis
     following = db.relationship(
@@ -51,34 +52,46 @@ class Video(db.Model):
     duration = db.Column(db.String(20), default="")
     creator = db.Column(db.String(80), default="Anonyme")
     views = db.Column(db.Integer, default=0)
+    likes = db.Column(db.Integer, default=0)
+    dislikes = db.Column(db.Integer, default=0)
+    xp = db.Column(db.Integer, default=0)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     hls_manifest = db.Column(db.String(500), nullable=True)
     
     # Relations
     comments = db.relationship('Comment', backref='video', lazy=True)
-    likes = db.relationship('Like', backref='video', lazy=True)
-    xps = db.relationship('Xp', backref='video', lazy=True)   # 👈 ajout
+    like_records = db.relationship('Like', backref='video', lazy=True)
+    xp_records = db.relationship('Xp', backref='video', lazy=True)
 
     @property
     def source_url(self):
+        """Retourne l'URL de la vidéo avec priorité à Supabase"""
+        # Priorité 1 : URL externe (Supabase - permanent)
+        if self.external_url:
+            return self.external_url
+        # Priorité 2 : HLS (si disponible)
         if self.hls_manifest:
             return url_for("hls", filename=self.hls_manifest, _external=False)
+        # Priorité 3 : Fichier local (fallback, mais sera supprimé sur Render)
         if self.filename:
             return url_for("media", filename=self.filename, _external=False)
-        return self.external_url or ""
+        return ""
     
     @property
     def like_count(self):
+        """Compte les likes depuis la table Like"""
         return Like.query.filter_by(video_id=self.id, is_like=True).count()
     
     @property
     def dislike_count(self):
+        """Compte les dislikes depuis la table Like"""
         return Like.query.filter_by(video_id=self.id, is_like=False).count()
 
     @property
     def xp_count(self):
-        return Xp.query.filter_by(video_id=self.id).count()   # 👈 pratique pour compter les XP
+        """Compte les XP depuis la table Xp"""
+        return Xp.query.filter_by(video_id=self.id).count()
 
 
 class Comment(db.Model):
@@ -111,9 +124,6 @@ class Follow(db.Model):
     __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id'),)
 
 
-# -------------------------
-# Nouveau modèle XP
-# -------------------------
 class Xp(db.Model):
     __tablename__ = "xp"
     id = db.Column(db.Integer, primary_key=True)
