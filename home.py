@@ -622,7 +622,9 @@ def register():
             return redirect(url_for("register"))
 
         hashed = generate_password_hash(password)
-        new_user = User(display_name=username, password_hash=hashed)
+        # Générer un email automatique basé sur le username
+        email = f"{username.lower().replace(' ', '')}@mitabo.local"
+        new_user = User(display_name=username, email=email, password_hash=hashed)
         db.session.add(new_user)
         db.session.commit()
 
@@ -1108,6 +1110,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
