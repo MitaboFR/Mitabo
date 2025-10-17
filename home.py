@@ -777,25 +777,36 @@ def upload_post():
         print("DEBUG: fichier sauvegardé =", file_path)
 
         public_url = None
-        try:
-            with open(file_path, "rb") as file_data:
-                res = supabase.storage.from_(BUCKET_NAME).upload(
-                    f"videos/{final}",
-                    file_data,
-                    {"content-type": f.mimetype}
-                )
-            print("DEBUG: réponse Supabase =", res)
+        # Upload vers Supabase OBLIGATOIRE
+        if supabase:
+            try:
+                with open(file_path, "rb") as file_data:
+                    res = supabase.storage.from_(BUCKET_NAME).upload(
+                        f"videos/{final}",
+                        file_data,
+                        {"content-type": f.mimetype or "video/mp4"}
+                    )
+                print("DEBUG: réponse Supabase =", res)
 
-            if isinstance(res, dict) and res.get("error"):
-                flash(f"Erreur Supabase: {res['error']['message']}")
-            else:
-                public_url_res = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")
-                if isinstance(public_url_res, dict) and "publicUrl" in public_url_res:
-                    public_url = public_url_res["publicUrl"]
+                # Récupérer l'URL publique
+                public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")
+                print("DEBUG: URL publique Supabase =", public_url)
 
-        except Exception as e:
-            print(f"Erreur upload vers Supabase: {e}")
-            flash(f"Erreur lors de l'upload Supabase: {e}")
+            except Exception as e:
+                print(f"Erreur upload vers Supabase: {e}")
+                flash(f"Erreur lors de l'upload Supabase: {e}")
+                # Supprimer le fichier local et abandonner
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                return redirect(url_for("upload_form"))
+        else:
+            flash("Supabase non configuré - impossible d'uploader")
+            return redirect(url_for("upload_form"))
+
+        # Supprimer le fichier local après upload réussi vers Supabase
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print("DEBUG: fichier local supprimé après upload Supabase")
 
         v = Video(
             title=title,
@@ -806,22 +817,13 @@ def upload_post():
             duration="",
             creator=creator,
             user_id=current_user.id,
-            external_url=public_url
+            external_url=public_url  # Utiliser l'URL Supabase
         )
-
-        if to_hls and ffmpeg_exists():
-            target_dir = os.path.join(HLS_DIR, f"video_{datetime.utcnow().timestamp():.0f}")
-            try:
-                rel_master = transcode_to_hls(file_path, target_dir)
-                v.hls_manifest = rel_master
-            except Exception as e:
-                print(f"Erreur transcodage HLS: {e}")
-                flash("Transcodage HLS échoué — lecture MP4 directe utilisée.")
 
         db.session.add(v)
         db.session.commit()
 
-        flash("Vidéo uploadée avec succès !")
+        flash("✅ Vidéo uploadée avec succès sur Supabase !")
         return redirect(url_for("watch", video_id=v.id))
 
     except Exception as e:
@@ -1119,6 +1121,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
