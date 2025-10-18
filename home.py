@@ -1040,6 +1040,31 @@ def follow_user(user_id):
 # -------------------------
 # Routes admin
 # -------------------------
+@app.route("/admin/sync-counters")
+@login_required
+def sync_counters():
+    """Route admin pour synchroniser les compteurs likes/dislikes/xp"""
+    try:
+        if not current_user.is_admin:
+            flash("Accès refusé")
+            return redirect(url_for("home"))
+        
+        videos = Video.query.all()
+        count = 0
+        for v in videos:
+            v.likes = Like.query.filter_by(video_id=v.id, is_like=True).count()
+            v.dislikes = Like.query.filter_by(video_id=v.id, is_like=False).count()
+            v.xp = Xp.query.filter_by(video_id=v.id).count()
+            count += 1
+        
+        db.session.commit()
+        flash(f"✅ {count} vidéos synchronisées avec succès")
+        return redirect(url_for("home"))
+    except Exception as e:
+        print(f"Erreur dans sync_counters(): {e}")
+        flash("Erreur lors de la synchronisation")
+        return redirect(url_for("home"))
+
 @app.route("/admin/ban/<int:user_id>")
 @login_required
 def ban_user(user_id):
@@ -1121,6 +1146,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
