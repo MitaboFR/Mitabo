@@ -52,9 +52,6 @@ class Video(db.Model):
     duration = db.Column(db.String(20), default="")
     creator = db.Column(db.String(80), default="Anonyme")
     views = db.Column(db.Integer, default=0)
-    likes = db.Column(db.Integer, default=0)
-    dislikes = db.Column(db.Integer, default=0)
-    xp = db.Column(db.Integer, default=0)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     hls_manifest = db.Column(db.String(500), nullable=True)
@@ -79,17 +76,17 @@ class Video(db.Model):
         return ""
     
     @property
-    def like_count(self):
+    def likes(self):
         """Compte les likes depuis la table Like"""
         return Like.query.filter_by(video_id=self.id, is_like=True).count()
     
     @property
-    def dislike_count(self):
+    def dislikes(self):
         """Compte les dislikes depuis la table Like"""
         return Like.query.filter_by(video_id=self.id, is_like=False).count()
 
     @property
-    def xp_count(self):
+    def xp(self):
         """Compte les XP depuis la table Xp"""
         return Xp.query.filter_by(video_id=self.id).count()
 
@@ -132,3 +129,4 @@ class Xp(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     __table_args__ = (db.UniqueConstraint('user_id', 'video_id', name="unique_user_xp"),)
+
