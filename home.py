@@ -232,6 +232,14 @@ BASE_HTML = """<!DOCTYPE html>
     <title>{{ title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body {
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            transition: background-image 0.3s ease;
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
     <nav class="bg-white shadow-sm border-b">
@@ -240,6 +248,14 @@ BASE_HTML = """<!DOCTYPE html>
             <div class="flex items-center space-x-4">
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('upload_form') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Upload</a>
+                    
+                    <!-- Bouton personnalisation fond d'écran -->
+                    <button onclick="openBackgroundModal()" class="p-2 rounded hover:bg-gray-100" title="Personnaliser le fond d'écran">
+                        <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                        </svg>
+                    </button>
+                    
                     <span class="text-gray-700">{{ current_user.display_name }}</span>
                     
                     <!-- Menu Hamburger -->
@@ -279,6 +295,98 @@ BASE_HTML = """<!DOCTYPE html>
         </div>
     </nav>
     
+    <!-- Modale de sélection de fond d'écran -->
+    <div id="background-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">Personnaliser le fond d'écran</h2>
+                    <button onclick="closeBackgroundModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <!-- Par défaut -->
+                    <div class="cursor-pointer group" onclick="setBackground('default')">
+                        <div class="aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition">
+                            <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                <span class="text-sm">Par défaut</span>
+                            </div>
+                        </div>
+                        <p class="text-center mt-2 text-sm font-medium">Par défaut</p>
+                    </div>
+                    
+                    <!-- Nature -->
+                    <div class="cursor-pointer group" onclick="setBackground('nature')">
+                        <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
+                             style="background-image: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800')">
+                        </div>
+                        <p class="text-center mt-2 text-sm font-medium">Nature</p>
+                    </div>
+                    
+                    <!-- Plage -->
+                    <div class="cursor-pointer group" onclick="setBackground('plage')">
+                        <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
+                             style="background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800')">
+                        </div>
+                        <p class="text-center mt-2 text-sm font-medium">Plage</p>
+                    </div>
+                    
+                    <!-- Galaxy -->
+                    <div class="cursor-pointer group" onclick="setBackground('galaxy')">
+                        <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
+                             style="background-image: url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=800')">
+                        </div>
+                        <p class="text-center mt-2 text-sm font-medium">Galaxy</p>
+                    </div>
+                    
+                    <!-- Abstrait -->
+                    <div class="cursor-pointer group" onclick="setBackground('abstrait')">
+                        <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
+                             style="background-image: url('https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800')">
+                        </div>
+                        <p class="text-center mt-2 text-sm font-medium">Abstrait</p>
+                    </div>
+                    
+                    <!-- Montagne -->
+                    <div class="cursor-pointer group" onclick="setBackground('montagne')">
+                        <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
+                             style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800')">
+                        </div>
+                        <p class="text-center mt-2 text-sm font-medium">Montagne</p>
+                    </div>
+                    
+                    <!-- Ville -->
+                    <div class="cursor-pointer group" onclick="setBackground('ville')">
+                        <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
+                             style="background-image: url('https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=800')">
+                        </div>
+                        <p class="text-center mt-2 text-sm font-medium">Ville</p>
+                    </div>
+                    
+                    <!-- Coucher de soleil -->
+                    <div class="cursor-pointer group" onclick="setBackground('sunset')">
+                        <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
+                             style="background-image: url('https://images.unsplash.com/photo-1495567720989-cebdbdd97913?w=800')">
+                        </div>
+                        <p class="text-center mt-2 text-sm font-medium">Coucher de soleil</p>
+                    </div>
+                    
+                    <!-- Gradient -->
+                    <div class="cursor-pointer group" onclick="setBackground('gradient')">
+                        <div class="aspect-video rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
+                             style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+                        </div>
+                        <p class="text-center mt-2 text-sm font-medium">Gradient</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     {% with messages = get_flashed_messages() %}
         {% if messages %}
             <div class="container mx-auto px-4 py-2">
@@ -296,6 +404,50 @@ BASE_HTML = """<!DOCTYPE html>
     </footer>
     
     <script>
+        // Backgrounds disponibles
+        const backgrounds = {
+            'default': 'none',
+            'nature': 'url("https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920")',
+            'plage': 'url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920")',
+            'galaxy': 'url("https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1920")',
+            'abstrait': 'url("https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1920")',
+            'montagne': 'url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920")',
+            'ville': 'url("https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920")',
+            'sunset': 'url("https://images.unsplash.com/photo-1495567720989-cebdbdd97913?w=1920")',
+            'gradient': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        };
+        
+        // Charger le fond d'écran sauvegardé au chargement de la page
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedBg = localStorage.getItem('mitabo_background');
+            if (savedBg && backgrounds[savedBg]) {
+                if (savedBg === 'default') {
+                    document.body.style.background = '#f7f8fa';
+                } else {
+                    document.body.style.backgroundImage = backgrounds[savedBg];
+                }
+            }
+        });
+        
+        function openBackgroundModal() {
+            document.getElementById('background-modal').classList.remove('hidden');
+        }
+        
+        function closeBackgroundModal() {
+            document.getElementById('background-modal').classList.add('hidden');
+        }
+        
+        function setBackground(bgName) {
+            if (bgName === 'default') {
+                document.body.style.backgroundImage = 'none';
+                document.body.style.background = '#f7f8fa';
+            } else {
+                document.body.style.backgroundImage = backgrounds[bgName];
+            }
+            localStorage.setItem('mitabo_background', bgName);
+            closeBackgroundModal();
+        }
+        
         function toggleMenu() {
             const menu = document.getElementById('dropdown-menu');
             menu.classList.toggle('hidden');
@@ -305,8 +457,15 @@ BASE_HTML = """<!DOCTYPE html>
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('dropdown-menu');
             const button = document.getElementById('menu-button');
-            if (!button.contains(event.target) && !menu.contains(event.target)) {
+            if (button && !button.contains(event.target) && !menu.contains(event.target)) {
                 menu.classList.add('hidden');
+            }
+        });
+        
+        // Fermer la modale si on clique en dehors
+        document.getElementById('background-modal')?.addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeBackgroundModal();
             }
         });
     </script>
