@@ -239,12 +239,41 @@ BASE_HTML = """<!DOCTYPE html>
             <a href="{{ url_for('home') }}" class="text-xl font-bold text-blue-600">Mitabo</a>
             <div class="flex items-center space-x-4">
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('upload_form') }}" class="bg-blue-500 text-white px-4 py-2 rounded">Upload</a>
-                    <span>{{ current_user.display_name }}</span>
-                    <a href="{{ url_for('logout') }}" class="text-gray-600">Déconnexion</a>
+                    <a href="{{ url_for('upload_form') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Upload</a>
+                    <span class="text-gray-700">{{ current_user.display_name }}</span>
+                    
+                    <!-- Menu Hamburger -->
+                    <div class="relative">
+                        <button onclick="toggleMenu()" class="p-2 rounded hover:bg-gray-100" id="menu-button">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                        </button>
+                        
+                        <!-- Dropdown Menu -->
+                        <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
+                            <a href="{{ url_for('show_profil', username=current_user.display_name) }}" 
+                               class="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-t-lg">
+                                📋 Profil
+                            </a>
+                            <a href="{{ url_for('reglement') }}" 
+                               class="block px-4 py-3 text-gray-700 hover:bg-gray-100">
+                                📜 Règlement
+                            </a>
+                            <a href="{{ url_for('parametres') }}" 
+                               class="block px-4 py-3 text-gray-700 hover:bg-gray-100">
+                                ⚙️ Paramètres
+                            </a>
+                            <hr class="my-1">
+                            <a href="{{ url_for('logout') }}" 
+                               class="block px-4 py-3 text-red-600 hover:bg-red-50 rounded-b-lg">
+                                🚪 Déconnexion
+                            </a>
+                        </div>
+                    </div>
                 {% else %}
-                    <a href="{{ url_for('login') }}" class="text-blue-600">Connexion</a>
-                    <a href="{{ url_for('register') }}" class="bg-blue-500 text-white px-4 py-2 rounded">Inscription</a>
+                    <a href="{{ url_for('login') }}" class="text-blue-600 hover:text-blue-800">Connexion</a>
+                    <a href="{{ url_for('register') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Inscription</a>
                 {% endif %}
             </div>
         </div>
@@ -265,6 +294,22 @@ BASE_HTML = """<!DOCTYPE html>
     <footer class="bg-gray-800 text-white text-center py-4 mt-12">
         <p>&copy; {{ year }} Mitabo</p>
     </footer>
+    
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('dropdown-menu');
+            menu.classList.toggle('hidden');
+        }
+        
+        // Fermer le menu si on clique ailleurs
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('dropdown-menu');
+            const button = document.getElementById('menu-button');
+            if (!button.contains(event.target) && !menu.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+    </script>
 </body>
 </html>"""
 
@@ -658,6 +703,111 @@ def logout():
     logout_user()
     flash("Vous êtes déconnecté.")
     return redirect(url_for("login"))
+
+# -------------------------
+# Routes Règlement et Paramètres
+# -------------------------
+@app.route("/reglement")
+def reglement():
+    """Page du règlement de la plateforme"""
+    body = """
+    <main class="container mx-auto px-4 py-8 max-w-4xl">
+        <h1 class="text-3xl font-bold mb-6">📜 Règlement de Mitabo</h1>
+        
+        <div class="bg-white rounded-lg shadow-sm p-6 space-y-4">
+            <section>
+                <h2 class="text-xl font-semibold mb-2">1. Respect et courtoisie</h2>
+                <p class="text-gray-700">Tout comportement irrespectueux, harcèlement ou discours haineux est strictement interdit.</p>
+            </section>
+            
+            <section>
+                <h2 class="text-xl font-semibold mb-2">2. Contenu autorisé</h2>
+                <p class="text-gray-700">Les vidéos doivent respecter les lois en vigueur. Tout contenu illégal, violent ou pornographique sera supprimé.</p>
+            </section>
+            
+            <section>
+                <h2 class="text-xl font-semibold mb-2">3. Droits d'auteur</h2>
+                <p class="text-gray-700">Vous ne pouvez publier que du contenu dont vous détenez les droits ou pour lequel vous avez une autorisation.</p>
+            </section>
+            
+            <section>
+                <h2 class="text-xl font-semibold mb-2">4. Sanctions</h2>
+                <p class="text-gray-700">Le non-respect de ce règlement peut entraîner la suppression de contenu, la suspension ou le bannissement du compte.</p>
+            </section>
+            
+            <section>
+                <h2 class="text-xl font-semibold mb-2">5. Signalement</h2>
+                <p class="text-gray-700">Si vous constatez un contenu inapproprié, signalez-le immédiatement aux modérateurs.</p>
+            </section>
+        </div>
+        
+        <div class="mt-6 text-center">
+            <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">← Retour à l'accueil</a>
+        </div>
+    </main>
+    """
+    return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Règlement — Mitabo")
+
+@app.route("/parametres", methods=["GET", "POST"])
+@login_required
+def parametres():
+    """Page des paramètres utilisateur"""
+    if request.method == "POST":
+        new_display_name = request.form.get("display_name")
+        new_email = request.form.get("email")
+        
+        if new_display_name and new_display_name != current_user.display_name:
+            current_user.display_name = new_display_name
+            db.session.commit()
+            flash("✅ Nom d'affichage mis à jour")
+        
+        if new_email and new_email != current_user.email:
+            current_user.email = new_email
+            db.session.commit()
+            flash("✅ Email mis à jour")
+        
+        return redirect(url_for("parametres"))
+    
+    body = """
+    <main class="container mx-auto px-4 py-8 max-w-2xl">
+        <h1 class="text-3xl font-bold mb-6">⚙️ Paramètres</h1>
+        
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <form method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Nom d'affichage</label>
+                    <input name="display_name" type="text" value="{{ current_user.display_name }}" 
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Email</label>
+                    <input name="email" type="email" value="{{ current_user.email }}" 
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                
+                <div class="pt-4">
+                    <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
+                        Enregistrer les modifications
+                    </button>
+                </div>
+            </form>
+            
+            <hr class="my-6">
+            
+            <div>
+                <h2 class="text-lg font-semibold mb-2">Informations du compte</h2>
+                <p class="text-gray-600 text-sm">Membre depuis : {{ current_user.created_at.strftime('%d %B %Y') }}</p>
+                <p class="text-gray-600 text-sm">Nombre de vidéos : {{ current_user.videos|length }}</p>
+            </div>
+        </div>
+        
+        <div class="mt-6 text-center">
+            <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">← Retour à l'accueil</a>
+        </div>
+    </main>
+    """
+    return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Paramètres — Mitabo")
 
 # -------------------------
 # Routes principales
@@ -1112,6 +1262,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
