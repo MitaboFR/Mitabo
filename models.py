@@ -39,6 +39,40 @@ class User(UserMixin, db.Model):
 
     def check_password(self, raw) -> bool:
         return check_password_hash(self.password_hash, raw)
+    
+    def is_following(self, user):
+        """Vérifie si cet utilisateur suit un autre utilisateur"""
+        return Follow.query.filter_by(
+            follower_id=self.id, 
+            followed_id=user.id
+        ).first() is not None
+    
+    @property
+    def followers_count(self):
+        """Nombre d'abonnés"""
+        return self.followers.count()
+    
+    @property
+    def following_count(self):
+        """Nombre d'abonnements"""
+        return self.following.count()
+    
+    def is_following(self, user):
+        """Vérifie si cet utilisateur suit un autre utilisateur"""
+        return Follow.query.filter_by(
+            follower_id=self.id, 
+            followed_id=user.id
+        ).first() is not None
+    
+    @property
+    def followers_count(self):
+        """Nombre d'abonnés"""
+        return self.followers.count()
+    
+    @property
+    def following_count(self):
+        """Nombre d'abonnements"""
+        return self.following.count()
 
 class Video(db.Model):
     __tablename__ = "videos"
