@@ -1009,17 +1009,17 @@ def reglement():
         <div style="max-width: 900px; margin: 32px auto; background: #fff; border-radius: 8px; box-shadow: 0 6px 18px rgba(17, 17, 17, 0.06); padding: 28px;">
             <header style="margin-bottom: 24px;">
                 <h1 style="margin: 0 0 8px 0; font-size: 24px; letter-spacing: 0.2px; font-weight: bold;">Règlement Officiel de Mitabo</h1>
-                <div style="color: #6b7280; font-size: 13px;">Version officielle — Ton administratif</div>
+                <div style="color: #6b7280; font-size: 13px;">Version officielle - Ton administratif</div>
             </header>
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 1 – Objet du règlement</h2>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 1 - Objet du règlement</h2>
                 <p style="line-height: 1.55; font-size: 15px;">Le présent règlement a pour objet de définir les conditions de publication, de diffusion et d'utilisation de la plateforme <strong>Mitabo</strong>. Il vise à assurer un environnement respectueux, créatif et conforme à la législation en vigueur.</p>
             </section>
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 2 – Format et durée des vidéos</h2>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 2 - Format et durée des vidéos</h2>
                 <ol style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
                     <li>Les vidéos publiées sur Mitabo doivent avoir une durée comprise entre <strong>3 et 5 minutes</strong>.</li>
                     <li>Le format recommandé est horizontal (16:9) avec une qualité minimale de 720p (HD).</li>
@@ -1029,7 +1029,7 @@ def reglement():
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 3 – Contenu autorisé</h2>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 3 - Contenu autorisé</h2>
                 <p style="line-height: 1.55; font-size: 15px;">Sont autorisés :</p>
                 <ul style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
                     <li>Les créations originales (documentaires, tutoriels, vlogs, courts-métrages, etc.) ;</li>
@@ -1040,7 +1040,7 @@ def reglement():
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 4 – Contenu interdit</h2>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 4 - Contenu interdit</h2>
                 <p style="line-height: 1.55; font-size: 15px;">Sont formellement interdits :</p>
                 <ul style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
                     <li>Les propos ou images à caractère haineux, violent, discriminatoire ou diffamatoire ;</li>
@@ -1052,7 +1052,7 @@ def reglement():
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 5 – Comportement des utilisateurs</h2>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 5 - Comportement des utilisateurs</h2>
                 <p style="line-height: 1.55; font-size: 15px;">Les utilisateurs de Mitabo doivent :</p>
                 <ul style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
                     <li>Adopter une attitude respectueuse envers la communauté et l'équipe de modération ;</li>
@@ -1063,7 +1063,7 @@ def reglement():
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 6 – Sanctions</h2>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 6 - Sanctions</h2>
                 <p style="line-height: 1.55; font-size: 15px;">Tout manquement au présent règlement pourra entraîner :</p>
                 <ol style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
                     <li>Un avertissement écrit adressé à l'utilisateur concerné ;</li>
@@ -1075,17 +1075,17 @@ def reglement():
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 7 – Entrée en vigueur</h2>
-                <p style="line-height: 1.55; font-size: 15px;">Le présent règlement entre en vigueur à compter de sa publication officielle sur la plateforme Mitabo. Toute utilisation du service implique l'acceptation sans réserve des dispositions énoncées ci‑dessus.</p>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 7 - Entrée en vigueur</h2>
+                <p style="line-height: 1.55; font-size: 15px;">Le présent règlement entre en vigueur à compter de sa publication officielle sur la plateforme Mitabo. Toute utilisation du service implique l'acceptation sans réserve des dispositions énoncées ci-dessus.</p>
             </section>
             
             <div style="color: #6b7280; font-size: 13px; margin-top: 18px; text-align: center;">
-                <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">← Retour à l'accueil</a>
+                <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">Retour à l'accueil</a>
             </div>
         </div>
     </main>
     """
-    return render_template_string(BASE_HTML, body=html_content, year=datetime.utcnow().year, title="Règlement Officiel — Mitabo")
+    return render_template_string(BASE_HTML, body=html_content, year=datetime.utcnow().year, title="Règlement Officiel - Mitabo")
 
 @app.route("/parametres", methods=["GET", "POST"])
 @login_required
@@ -1756,6 +1756,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
