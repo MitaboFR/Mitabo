@@ -791,9 +791,9 @@ PROFIL_BODY = """
             <div class="flex items-start space-x-6">
                 <!-- Avatar -->
                 <div class="flex-shrink-0">
-                    <img src="https://ui-avatars.com/api/?name={{ user.display_name }}&size=120&background=3b82f6&color=fff" 
+                    <img src="{{ user.avatar_url or 'https://ui-avatars.com/api/?name=' + user.display_name|urlencode + '&size=120&background=3b82f6&color=fff' }}" 
                          alt="Avatar de {{ user.display_name }}" 
-                         class="w-32 h-32 rounded-full border-4 border-blue-500">
+                         class="w-32 h-32 rounded-full border-4 border-blue-500 object-cover">
                 </div>
                 
                 <!-- Informations -->
@@ -814,10 +814,20 @@ PROFIL_BODY = """
                                     S'abonner
                                 </button>
                             {% endif %}
+                        {% elif current_user.is_authenticated and current_user.id == user.id %}
+                            <a href="{{ url_for('parametres') }}" 
+                               class="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition">
+                                Modifier le profil
+                            </a>
                         {% endif %}
                     </div>
                     
-                    <p class="text-gray-600 mb-4">{{ user.email }}</p>
+                    <!-- Bio -->
+                    {% if user.bio %}
+                    <p class="text-gray-700 mb-4 italic">"{{ user.bio }}"</p>
+                    {% else %}
+                    <p class="text-gray-400 mb-4 italic">Aucune bio pour le moment</p>
+                    {% endif %}
                     
                     <!-- Statistiques -->
                     <div class="flex space-x-6 text-sm">
@@ -826,11 +836,11 @@ PROFIL_BODY = """
                             <span class="text-gray-600">vidéos</span>
                         </div>
                         <div>
-                            <span class="font-semibold text-gray-800" id="followers-count">{{ user.followers.count() }}</span>
+                            <span class="font-semibold text-gray-800" id="followers-count">{{ user.followers_count }}</span>
                             <span class="text-gray-600">abonnés</span>
                         </div>
                         <div>
-                            <span class="font-semibold text-gray-800">{{ user.following.count() }}</span>
+                            <span class="font-semibold text-gray-800">{{ user.following_count }}</span>
                             <span class="text-gray-600">abonnements</span>
                         </div>
                     </div>
@@ -881,6 +891,30 @@ PROFIL_BODY = """
             {% endif %}
         </div>
     </div>
+</main>
+
+<script>
+function followUser(userId) {
+    fetch(`/follow/${userId}`, {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            const btn = document.getElementById('follow-btn');
+            const followersCount = document.getElementById('followers-count');
+            
+            if (data.following) {
+                btn.textContent = 'Se désabonner';
+                btn.className = 'px-6 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 transition';
+                followersCount.textContent = parseInt(followersCount.textContent) + 1;
+            } else {
+                btn.textContent = "S'abonner";
+                btn.className = 'px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition';
+                followersCount.textContent = Math.max(0, parseInt(followersCount.textContent) - 1);
+            }
+        })
+        .catch(err => console.error('Erreur follow:', err));
+}
+</script>
+""">
 </main>
 
 <script>
@@ -1068,42 +1102,131 @@ def reglement():
 def parametres():
     """Page des paramètres utilisateur"""
     if request.method == "POST":
-        new_display_name = request.form.get("display_name")
-        new_email = request.form.get("email")
+        action = request.form.get("action")
         
-        if new_display_name and new_display_name != current_user.display_name:
-            current_user.display_name = new_display_name
+        if action == "profile":
+            # Mise à jour du profil
+            new_display_name = request.form.get("display_name", "").strip()
+            new_email = request.form.get("email", "").strip()
+            new_bio = request.form.get("bio", "").strip()
+            new_avatar_url = request.form.get("avatar_url", "").strip()
+            
+            if new_display_name and new_display_name != current_user.display_name:
+                # Vérifier si le nom n'est pas déjà pris
+                existing = User.query.filter_by(display_name=new_display_name).first()
+                if existing and existing.id != current_user.id:
+                    flash("❌ Ce nom d'utilisateur est déjà pris")
+                else:
+                    current_user.display_name = new_display_name
+                    flash("✅ Nom d'affichage mis à jour")
+            
+            if new_email and new_email != current_user.email:
+                # Vérifier si l'email n'est pas déjà pris
+                existing = User.query.filter_by(email=new_email).first()
+                if existing and existing.id != current_user.id:
+                    flash("❌ Cet email est déjà utilisé")
+                else:
+                    current_user.email = new_email
+                    flash("✅ Email mis à jour")
+            
+            current_user.bio = new_bio
+            current_user.avatar_url = new_avatar_url if new_avatar_url else None
+            
             db.session.commit()
-            flash("✅ Nom d'affichage mis à jour")
+            return redirect(url_for("parametres"))
         
-        if new_email and new_email != current_user.email:
-            current_user.email = new_email
-            db.session.commit()
-            flash("✅ Email mis à jour")
-        
-        return redirect(url_for("parametres"))
+        elif action == "password":
+            # Changement de mot de passe
+            current_password = request.form.get("current_password")
+            new_password = request.form.get("new_password")
+            confirm_password = request.form.get("confirm_password")
+            
+            if not current_user.check_password(current_password):
+                flash("❌ Mot de passe actuel incorrect")
+            elif new_password != confirm_password:
+                flash("❌ Les nouveaux mots de passe ne correspondent pas")
+            elif len(new_password) < 6:
+                flash("❌ Le mot de passe doit contenir au moins 6 caractères")
+            else:
+                current_user.set_password(new_password)
+                db.session.commit()
+                flash("✅ Mot de passe modifié avec succès")
+            
+            return redirect(url_for("parametres"))
     
     body = """
-    <main class="container mx-auto px-4 py-8 max-w-2xl">
+    <main class="container mx-auto px-4 py-8 max-w-3xl">
         <h1 class="text-3xl font-bold mb-6">⚙️ Paramètres</h1>
         
-        <div class="bg-white rounded-lg shadow-sm p-6">
+        <!-- Onglets -->
+        <div class="flex space-x-4 mb-6 border-b">
+            <button onclick="showTab('profile')" id="tab-profile" 
+                    class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-600">
+                Profil
+            </button>
+            <button onclick="showTab('security')" id="tab-security" 
+                    class="px-4 py-2 font-medium border-b-2 border-transparent text-gray-600 hover:text-blue-600">
+                Sécurité
+            </button>
+        </div>
+        
+        <!-- Onglet Profil -->
+        <div id="content-profile" class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-xl font-semibold mb-4">Personnalisation du profil</h2>
+            
+            <!-- Aperçu de l'avatar -->
+            <div class="mb-6 flex items-center space-x-4">
+                <img id="avatar-preview" 
+                     src="{{ current_user.avatar_url or 'https://ui-avatars.com/api/?name=' + current_user.display_name|urlencode + '&size=120&background=3b82f6&color=fff' }}" 
+                     alt="Avatar" 
+                     class="w-24 h-24 rounded-full border-4 border-blue-500">
+                <div>
+                    <p class="text-sm text-gray-600 mb-2">Votre avatar actuel</p>
+                    <p class="text-xs text-gray-500">Collez l'URL d'une image ci-dessous pour changer</p>
+                </div>
+            </div>
+            
             <form method="POST" class="space-y-4">
+                <input type="hidden" name="action" value="profile">
+                
                 <div>
                     <label class="block text-sm font-medium mb-1">Nom d'affichage</label>
                     <input name="display_name" type="text" value="{{ current_user.display_name }}" 
-                           class="w-full px-3 py-2 border rounded-lg">
+                           class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                    <p class="text-xs text-gray-500 mt-1">C'est le nom qui apparaîtra sur votre profil</p>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium mb-1">Email</label>
                     <input name="email" type="email" value="{{ current_user.email }}" 
-                           class="w-full px-3 py-2 border rounded-lg">
+                           class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Bio</label>
+                    <textarea name="bio" rows="4" 
+                              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" 
+                              placeholder="Parlez-nous de vous...">{{ current_user.bio or '' }}</textarea>
+                    <p class="text-xs text-gray-500 mt-1">Décrivez-vous en quelques mots (max 500 caractères)</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">URL de l'avatar</label>
+                    <input name="avatar_url" type="url" value="{{ current_user.avatar_url or '' }}" 
+                           id="avatar-url-input"
+                           class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" 
+                           placeholder="https://example.com/mon-avatar.jpg">
+                    <p class="text-xs text-gray-500 mt-1">
+                        Utilisez des sites comme 
+                        <a href="https://imgur.com" target="_blank" class="text-blue-600 hover:underline">Imgur</a>, 
+                        <a href="https://gravatar.com" target="_blank" class="text-blue-600 hover:underline">Gravatar</a> ou 
+                        <a href="https://ui-avatars.com" target="_blank" class="text-blue-600 hover:underline">UI Avatars</a>
+                    </p>
                 </div>
                 
                 <div class="pt-4">
-                    <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
-                        Enregistrer les modifications
+                    <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition">
+                        💾 Enregistrer les modifications
                     </button>
                 </div>
             </form>
@@ -1111,16 +1234,82 @@ def parametres():
             <hr class="my-6">
             
             <div>
-                <h2 class="text-lg font-semibold mb-2">Informations du compte</h2>
+                <h3 class="text-lg font-semibold mb-2">Informations du compte</h3>
                 <p class="text-gray-600 text-sm">Membre depuis : {{ current_user.created_at.strftime('%d %B %Y') }}</p>
                 <p class="text-gray-600 text-sm">Nombre de vidéos : {{ current_user.videos|length }}</p>
+                <p class="text-gray-600 text-sm">Abonnés : {{ current_user.followers_count }}</p>
+                <p class="text-gray-600 text-sm">Abonnements : {{ current_user.following_count }}</p>
             </div>
+        </div>
+        
+        <!-- Onglet Sécurité -->
+        <div id="content-security" class="hidden bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-xl font-semibold mb-4">Sécurité du compte</h2>
+            
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="action" value="password">
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Mot de passe actuel</label>
+                    <input name="current_password" type="password" 
+                           class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Nouveau mot de passe</label>
+                    <input name="new_password" type="password" 
+                           class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                    <p class="text-xs text-gray-500 mt-1">Minimum 6 caractères</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Confirmer le nouveau mot de passe</label>
+                    <input name="confirm_password" type="password" 
+                           class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                
+                <div class="pt-4">
+                    <button type="submit" class="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition">
+                        🔒 Modifier le mot de passe
+                    </button>
+                </div>
+            </form>
         </div>
         
         <div class="mt-6 text-center">
             <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">← Retour à l'accueil</a>
         </div>
     </main>
+    
+    <script>
+        // Gestion des onglets
+        function showTab(tabName) {
+            // Cacher tous les contenus
+            document.getElementById('content-profile').classList.add('hidden');
+            document.getElementById('content-security').classList.add('hidden');
+            
+            // Désactiver tous les onglets
+            document.getElementById('tab-profile').classList.remove('border-blue-500', 'text-blue-600');
+            document.getElementById('tab-profile').classList.add('border-transparent', 'text-gray-600');
+            document.getElementById('tab-security').classList.remove('border-blue-500', 'text-blue-600');
+            document.getElementById('tab-security').classList.add('border-transparent', 'text-gray-600');
+            
+            // Afficher le contenu sélectionné
+            document.getElementById('content-' + tabName).classList.remove('hidden');
+            document.getElementById('tab-' + tabName).classList.remove('border-transparent', 'text-gray-600');
+            document.getElementById('tab-' + tabName).classList.add('border-blue-500', 'text-blue-600');
+        }
+        
+        // Prévisualisation de l'avatar
+        document.getElementById('avatar-url-input').addEventListener('input', function(e) {
+            const url = e.target.value;
+            if (url) {
+                document.getElementById('avatar-preview').src = url;
+            } else {
+                document.getElementById('avatar-preview').src = 'https://ui-avatars.com/api/?name={{ current_user.display_name|urlencode }}&size=120&background=3b82f6&color=fff';
+            }
+        });
+    </script>
     """
     return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Paramètres — Mitabo")
 
@@ -1577,6 +1766,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
