@@ -1005,16 +1005,51 @@ def reglement():
     """Page du règlement de la plateforme"""
     body = """
     <style>
-        .reglement-container { max-width: 900px; margin: 32px auto; background: #fff; border-radius: 8px; box-shadow: 0 6px 18px rgba(17,17,17,0.06); padding: 28px; }
-        .reglement-container header h1 { margin: 0 0 8px 0; font-size: 24px; letter-spacing: 0.2px; }
-        .reglement-container .meta { color: #6b7280; font-size: 13px; margin-bottom: 18px; }
-        .reglement-container hr { border: none; border-top: 1px solid #e6e9ee; margin: 22px 0; }
-        .reglement-container h2 { font-size: 18px; margin: 18px 0 8px; }
-        .reglement-container p, .reglement-container li { line-height: 1.55; font-size: 15px; }
-        .reglement-container ol { padding-left: 1.2em; }
-        .reglement-container ul { padding-left: 1.2em; }
-        .reglement-container .article { margin-bottom: 12px; }
-        .reglement-container .foot { color: #6b7280; font-size: 13px; margin-top: 18px; }
+        .reglement-container { 
+            max-width: 900px; 
+            margin: 32px auto; 
+            background: #fff; 
+            border-radius: 8px; 
+            box-shadow: 0 6px 18px rgba(17, 17, 17, 0.06); 
+            padding: 28px; 
+        }
+        .reglement-container header h1 { 
+            margin: 0 0 8px 0; 
+            font-size: 24px; 
+            letter-spacing: 0.2px; 
+        }
+        .reglement-container .meta { 
+            color: #6b7280; 
+            font-size: 13px; 
+            margin-bottom: 18px; 
+        }
+        .reglement-container hr { 
+            border: none; 
+            border-top: 1px solid #e6e9ee; 
+            margin: 22px 0; 
+        }
+        .reglement-container h2 { 
+            font-size: 18px; 
+            margin: 18px 0 8px; 
+        }
+        .reglement-container p, .reglement-container li { 
+            line-height: 1.55; 
+            font-size: 15px; 
+        }
+        .reglement-container ol { 
+            padding-left: 1.2em; 
+        }
+        .reglement-container ul { 
+            padding-left: 1.2em; 
+        }
+        .reglement-container .article { 
+            margin-bottom: 12px; 
+        }
+        .reglement-container .foot { 
+            color: #6b7280; 
+            font-size: 13px; 
+            margin-top: 18px; 
+        }
     </style>
     
     <div class="reglement-container">
