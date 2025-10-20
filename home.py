@@ -63,12 +63,19 @@ app.config.update(
     MAX_CONTENT_LENGTH=1024 * 1024 * 1024,  # 1 Go max upload
     DEBUG=True,
     SQLALCHEMY_ENGINE_OPTIONS={
-        "pool_size": 1,
-        "max_overflow": 0,
+        "pool_size": 5,
+        "max_overflow": 10,
         "pool_timeout": 30,
         "pool_pre_ping": True,
-        "pool_recycle": 1800,
-        "connect_args": {"sslmode": "require"}
+        "pool_recycle": 300,  # Recycle toutes les 5 minutes au lieu de 30
+        "connect_args": {
+            "sslmode": "require",
+            "connect_timeout": 10,
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5
+        }
     }
 )
 
@@ -96,6 +103,30 @@ with app.app_context():
             time.sleep(3)
     else:
         raise RuntimeError("❌ Impossible de se connecter à la base après plusieurs tentatives")
+
+# ------------------------------
+# Middleware pour gérer les déconnexions DB
+# ------------------------------
+@app.before_request
+def before_request():
+    """Vérifie la connexion DB avant chaque requête"""
+    try:
+        db.session.execute(text("SELECT 1"))
+    except OperationalError:
+        print("⚠️ Connexion DB perdue, tentative de reconnexion...")
+        db.session.rollback()
+        try:
+            db.session.execute(text("SELECT 1"))
+            print("✅ Reconnexion réussie")
+        except Exception as e:
+            print(f"❌ Reconnexion échouée: {e}")
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    """Nettoie la session DB après chaque requête"""
+    if exception:
+        db.session.rollback()
+    db.session.remove()
 
 # ------------------------------
 # Initialisation LoginManager
@@ -754,36 +785,101 @@ AUTH_BODY = """
 
 PROFIL_BODY = """
 <main class="container mx-auto px-4 py-8">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-xl font-semibold">Profil de {{ user.display_name }}</h1>
-        {% if current_user.is_authenticated and current_user.id != user.id %}
-        <button onclick="followUser({{ user.id }})" id="follow-btn" 
-                class="px-4 py-2 rounded {% if is_following %}bg-gray-300{% else %}bg-blue-500 text-white{% endif %}">
-            {% if is_following %}Abonné{% else %}S'abonner{% endif %}
-        </button>
-        {% endif %}
-    </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {% for v in videos %}
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition">
-                <a href="{{ url_for('watch', video_id=v.id) }}">
-                    {% if v.thumb_url %}
-                        <img src="{{ v.thumb_url }}" alt="{{ v.title }}" class="w-full h-48 object-cover">
-                    {% else %}
-                        <div class="w-full h-48 bg-gray-300 flex items-center justify-center">
-                            <span class="text-gray-500">Pas de miniature</span>
+    <div class="max-w-4xl mx-auto">
+        <!-- En-tête du profil -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-start space-x-6">
+                <!-- Avatar -->
+                <div class="flex-shrink-0">
+                    <img src="https://ui-avatars.com/api/?name={{ user.display_name }}&size=120&background=3b82f6&color=fff" 
+                         alt="Avatar de {{ user.display_name }}" 
+                         class="w-32 h-32 rounded-full border-4 border-blue-500">
+                </div>
+                
+                <!-- Informations -->
+                <div class="flex-1">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-3xl font-bold">{{ user.display_name }}</h2>
+                        
+                        <!-- Bouton follow/unfollow -->
+                        {% if current_user.is_authenticated and current_user.id != user.id %}
+                            {% if is_following %}
+                                <button onclick="followUser({{ user.id }})" id="follow-btn" 
+                                        class="px-6 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 transition">
+                                    Se désabonner
+                                </button>
+                            {% else %}
+                                <button onclick="followUser({{ user.id }})" id="follow-btn" 
+                                        class="px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition">
+                                    S'abonner
+                                </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    
+                    <p class="text-gray-600 mb-4">{{ user.email }}</p>
+                    
+                    <!-- Statistiques -->
+                    <div class="flex space-x-6 text-sm">
+                        <div>
+                            <span class="font-semibold text-gray-800">{{ videos|length }}</span>
+                            <span class="text-gray-600">vidéos</span>
                         </div>
-                    {% endif %}
-                </a>
-                <div class="p-4">
-                    <h3 class="font-semibold mb-2">{{ v.title }}</h3>
-                    <p class="text-gray-500 text-sm">{{ v.created_at.strftime('%d %b %Y') }}</p>
+                        <div>
+                            <span class="font-semibold text-gray-800" id="followers-count">{{ user.followers.count() }}</span>
+                            <span class="text-gray-600">abonnés</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-800">{{ user.following.count() }}</span>
+                            <span class="text-gray-600">abonnements</span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-gray-500 text-sm mt-4">
+                        Membre depuis le {{ user.created_at.strftime('%d %B %Y') }}
+                    </p>
                 </div>
             </div>
-        {% else %}
-            <p class="col-span-full text-center text-gray-500">Aucune vidéo.</p>
-        {% endfor %}
+        </div>
+        
+        <!-- Vidéos de l'utilisateur -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-xl font-semibold mb-4">Vidéos de {{ user.display_name }}</h3>
+            
+            {% if videos %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for v in videos %}
+                        <div class="bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition">
+                            <a href="{{ url_for('watch', video_id=v.id) }}">
+                                {% if v.thumb_url %}
+                                    <img src="{{ v.thumb_url }}" alt="{{ v.title }}" class="w-full h-40 object-cover">
+                                {% else %}
+                                    <div class="w-full h-40 bg-gray-300 flex items-center justify-center">
+                                        <span class="text-gray-500">Pas de miniature</span>
+                                    </div>
+                                {% endif %}
+                            </a>
+                            <div class="p-3">
+                                <h4 class="font-semibold text-sm mb-1">
+                                    <a href="{{ url_for('watch', video_id=v.id) }}" class="hover:text-blue-600">
+                                        {{ v.title }}
+                                    </a>
+                                </h4>
+                                <p class="text-gray-500 text-xs">{{ v.views or 0 }} vues</p>
+                                <p class="text-gray-400 text-xs">{{ v.created_at.strftime('%d %b %Y') }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                    <p>Aucune vidéo postée pour le moment.</p>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </main>
 
@@ -793,12 +889,16 @@ function followUser(userId) {
         .then(r => r.json())
         .then(data => {
             const btn = document.getElementById('follow-btn');
+            const followersCount = document.getElementById('followers-count');
+            
             if (data.following) {
-                btn.textContent = 'Abonné';
-                btn.className = 'px-4 py-2 rounded bg-gray-300';
+                btn.textContent = 'Se désabonner';
+                btn.className = 'px-6 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 transition';
+                followersCount.textContent = parseInt(followersCount.textContent) + 1;
             } else {
                 btn.textContent = "S'abonner";
-                btn.className = 'px-4 py-2 rounded bg-blue-500 text-white';
+                btn.className = 'px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition';
+                followersCount.textContent = Math.max(0, parseInt(followersCount.textContent) - 1);
             }
         })
         .catch(err => console.error('Erreur follow:', err));
@@ -1477,6 +1577,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
