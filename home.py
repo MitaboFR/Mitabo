@@ -1003,134 +1003,89 @@ def logout():
 @app.route("/reglement")
 def reglement():
     """Page du règlement de la plateforme"""
-    body = """
-    <style>
-        .reglement-container { 
-            max-width: 900px; 
-            margin: 32px auto; 
-            background: #fff; 
-            border-radius: 8px; 
-            box-shadow: 0 6px 18px rgba(17, 17, 17, 0.06); 
-            padding: 28px; 
-        }
-        .reglement-container header h1 { 
-            margin: 0 0 8px 0; 
-            font-size: 24px; 
-            letter-spacing: 0.2px; 
-        }
-        .reglement-container .meta { 
-            color: #6b7280; 
-            font-size: 13px; 
-            margin-bottom: 18px; 
-        }
-        .reglement-container hr { 
-            border: none; 
-            border-top: 1px solid #e6e9ee; 
-            margin: 22px 0; 
-        }
-        .reglement-container h2 { 
-            font-size: 18px; 
-            margin: 18px 0 8px; 
-        }
-        .reglement-container p, .reglement-container li { 
-            line-height: 1.55; 
-            font-size: 15px; 
-        }
-        .reglement-container ol { 
-            padding-left: 1.2em; 
-        }
-        .reglement-container ul { 
-            padding-left: 1.2em; 
-        }
-        .reglement-container .article { 
-            margin-bottom: 12px; 
-        }
-        .reglement-container .foot { 
-            color: #6b7280; 
-            font-size: 13px; 
-            margin-top: 18px; 
-        }
-    </style>
-    
-    <div class="reglement-container">
-        <header>
-            <h1>Règlement Officiel de Mitabo</h1>
-            <div class="meta">Version officielle — Ton administratif</div>
-        </header>
-        
-        <section class="article">
-            <h2>Article 1 – Objet du règlement</h2>
-            <p>Le présent règlement a pour objet de définir les conditions de publication, de diffusion et d'utilisation de la plateforme <strong>Mitabo</strong>. Il vise à assurer un environnement respectueux, créatif et conforme à la législation en vigueur.</p>
-        </section>
-        <hr />
-        
-        <section class="article">
-            <h2>Article 2 – Format et durée des vidéos</h2>
-            <ol>
-                <li>Les vidéos publiées sur Mitabo doivent avoir une durée comprise entre <strong>3 et 5 minutes</strong>.</li>
-                <li>Le format recommandé est horizontal (16:9) avec une qualité minimale de 720p (HD).</li>
-                <li>Les vidéos doivent être montées, finalisées et conformes aux standards de qualité avant leur mise en ligne.</li>
-            </ol>
-        </section>
-        <hr />
-        
-        <section class="article">
-            <h2>Article 3 – Contenu autorisé</h2>
-            <p>Sont autorisés :</p>
-            <ul>
-                <li>Les créations originales (documentaires, tutoriels, vlogs, courts-métrages, etc.) ;</li>
-                <li>Les contenus respectueux de la loi, des droits d'auteur et de la dignité des personnes ;</li>
-                <li>Les musiques et extraits sous licence libre ou disposant d'une autorisation d'utilisation.</li>
-            </ul>
-        </section>
-        <hr />
-        
-        <section class="article">
-            <h2>Article 4 – Contenu interdit</h2>
-            <p>Sont formellement interdits :</p>
-            <ul>
-                <li>Les propos ou images à caractère haineux, violent, discriminatoire ou diffamatoire ;</li>
-                <li>Les contenus mensongers, trompeurs ou incitant à des comportements dangereux ;</li>
-                <li>La diffusion de données personnelles sans consentement préalable ;</li>
-                <li>Toute forme de plagiat ou d'atteinte aux droits d'autrui.</li>
-            </ul>
-        </section>
-        <hr />
-        
-        <section class="article">
-            <h2>Article 5 – Comportement des utilisateurs</h2>
-            <p>Les utilisateurs de Mitabo doivent :</p>
-            <ul>
-                <li>Adopter une attitude respectueuse envers la communauté et l'équipe de modération ;</li>
-                <li>Publier et commenter de manière constructive et courtoise ;</li>
-                <li>Signaler tout contenu non conforme au présent règlement.</li>
-            </ul>
-        </section>
-        <hr />
-        
-        <section class="article">
-            <h2>Article 6 – Sanctions</h2>
-            <p>Tout manquement au présent règlement pourra entraîner :</p>
-            <ol>
-                <li>Un avertissement écrit adressé à l'utilisateur concerné ;</li>
-                <li>Une suspension temporaire du compte en cas de récidive ;</li>
-                <li>Une exclusion définitive en cas de manquement grave ou répété.</li>
-            </ol>
-            <p>Les décisions de modération sont prises avec impartialité et dans le respect du droit d'expression de chacun.</p>
-        </section>
-        <hr />
-        
-        <section class="article">
-            <h2>Article 7 – Entrée en vigueur</h2>
-            <p>Le présent règlement entre en vigueur à compter de sa publication officielle sur la plateforme Mitabo. Toute utilisation du service implique l'acceptation sans réserve des dispositions énoncées ci‑dessus.</p>
-        </section>
-        
-        <div class="foot">
-            <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">← Retour à l'accueil</a>
+    # Utiliser un template sans CSS inline problématique
+    html_content = """
+    <main class="container mx-auto px-4 py-8">
+        <div style="max-width: 900px; margin: 32px auto; background: #fff; border-radius: 8px; box-shadow: 0 6px 18px rgba(17, 17, 17, 0.06); padding: 28px;">
+            <header style="margin-bottom: 24px;">
+                <h1 style="margin: 0 0 8px 0; font-size: 24px; letter-spacing: 0.2px; font-weight: bold;">Règlement Officiel de Mitabo</h1>
+                <div style="color: #6b7280; font-size: 13px;">Version officielle — Ton administratif</div>
+            </header>
+            
+            <section style="margin-bottom: 12px;">
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 1 – Objet du règlement</h2>
+                <p style="line-height: 1.55; font-size: 15px;">Le présent règlement a pour objet de définir les conditions de publication, de diffusion et d'utilisation de la plateforme <strong>Mitabo</strong>. Il vise à assurer un environnement respectueux, créatif et conforme à la législation en vigueur.</p>
+            </section>
+            <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
+            
+            <section style="margin-bottom: 12px;">
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 2 – Format et durée des vidéos</h2>
+                <ol style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
+                    <li>Les vidéos publiées sur Mitabo doivent avoir une durée comprise entre <strong>3 et 5 minutes</strong>.</li>
+                    <li>Le format recommandé est horizontal (16:9) avec une qualité minimale de 720p (HD).</li>
+                    <li>Les vidéos doivent être montées, finalisées et conformes aux standards de qualité avant leur mise en ligne.</li>
+                </ol>
+            </section>
+            <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
+            
+            <section style="margin-bottom: 12px;">
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 3 – Contenu autorisé</h2>
+                <p style="line-height: 1.55; font-size: 15px;">Sont autorisés :</p>
+                <ul style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
+                    <li>Les créations originales (documentaires, tutoriels, vlogs, courts-métrages, etc.) ;</li>
+                    <li>Les contenus respectueux de la loi, des droits d'auteur et de la dignité des personnes ;</li>
+                    <li>Les musiques et extraits sous licence libre ou disposant d'une autorisation d'utilisation.</li>
+                </ul>
+            </section>
+            <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
+            
+            <section style="margin-bottom: 12px;">
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 4 – Contenu interdit</h2>
+                <p style="line-height: 1.55; font-size: 15px;">Sont formellement interdits :</p>
+                <ul style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
+                    <li>Les propos ou images à caractère haineux, violent, discriminatoire ou diffamatoire ;</li>
+                    <li>Les contenus mensongers, trompeurs ou incitant à des comportements dangereux ;</li>
+                    <li>La diffusion de données personnelles sans consentement préalable ;</li>
+                    <li>Toute forme de plagiat ou d'atteinte aux droits d'autrui.</li>
+                </ul>
+            </section>
+            <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
+            
+            <section style="margin-bottom: 12px;">
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 5 – Comportement des utilisateurs</h2>
+                <p style="line-height: 1.55; font-size: 15px;">Les utilisateurs de Mitabo doivent :</p>
+                <ul style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
+                    <li>Adopter une attitude respectueuse envers la communauté et l'équipe de modération ;</li>
+                    <li>Publier et commenter de manière constructive et courtoise ;</li>
+                    <li>Signaler tout contenu non conforme au présent règlement.</li>
+                </ul>
+            </section>
+            <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
+            
+            <section style="margin-bottom: 12px;">
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 6 – Sanctions</h2>
+                <p style="line-height: 1.55; font-size: 15px;">Tout manquement au présent règlement pourra entraîner :</p>
+                <ol style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
+                    <li>Un avertissement écrit adressé à l'utilisateur concerné ;</li>
+                    <li>Une suspension temporaire du compte en cas de récidive ;</li>
+                    <li>Une exclusion définitive en cas de manquement grave ou répété.</li>
+                </ol>
+                <p style="line-height: 1.55; font-size: 15px;">Les décisions de modération sont prises avec impartialité et dans le respect du droit d'expression de chacun.</p>
+            </section>
+            <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
+            
+            <section style="margin-bottom: 12px;">
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 7 – Entrée en vigueur</h2>
+                <p style="line-height: 1.55; font-size: 15px;">Le présent règlement entre en vigueur à compter de sa publication officielle sur la plateforme Mitabo. Toute utilisation du service implique l'acceptation sans réserve des dispositions énoncées ci‑dessus.</p>
+            </section>
+            
+            <div style="color: #6b7280; font-size: 13px; margin-top: 18px; text-align: center;">
+                <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">← Retour à l'accueil</a>
+            </div>
         </div>
-    </div>
+    </main>
     """
-    return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Règlement Officiel — Mitabo")
+    return render_template_string(BASE_HTML, body=html_content, year=datetime.utcnow().year, title="Règlement Officiel — Mitabo")
 
 @app.route("/parametres", methods=["GET", "POST"])
 @login_required
@@ -1801,6 +1756,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
