@@ -1015,7 +1015,7 @@ def reglement():
             
             <section style="margin-bottom: 12px;">
                 <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 1 - Objet du règlement</h2>
-                <p style="line-height: 1.55; font-size: 15px;">Le présent règlement a pour objet de définir les conditions de publication, de diffusion et d'utilisation de la plateforme <strong>Mitabo</strong>. Il vise à assurer un environnement respectueux, créatif et conforme à la législation en vigueur.</p>
+                <p style="line-height: 1.55; font-size: 15px;">Le present rrglement a pour objet de définir les conditions de publication, de diffusion et d'utilisation de la plateforme <strong>Mitabo</strong>. Il vise à assurer un environnement respectueux, créatif et conforme à la législation en vigueur.</p>
             </section>
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
@@ -1757,6 +1757,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
