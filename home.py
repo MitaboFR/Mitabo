@@ -19,11 +19,11 @@ from PIL import Image
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
-# ⚡ Import extensions AVANT les modèles
-from extensions import db, migrate  # doit exister dans extensions.py
+# Import extensions AVANT les modeles
+from extensions import db, migrate
 
 # ------------------------------
-# Configuration des répertoires
+# Configuration des repertoires
 # ------------------------------
 BASE_DIR = os.path.dirname(__file__)
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
@@ -33,12 +33,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(HLS_DIR, exist_ok=True)
 
 # ------------------------------
-# Création de l'application Flask
+# Creation de l'application Flask
 # ------------------------------
 app = Flask(__name__)
 
 # ------------------------------
-# Configuration de la base de données
+# Configuration de la base de donnees
 # ------------------------------
 uri = os.getenv("DATABASE_URL")
 if not uri:
@@ -48,7 +48,7 @@ if not uri:
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-# Force SSL pour Supabase si nécessaire
+# Force SSL pour Supabase si necessaire
 if "supabase.co" in uri and "sslmode=" not in uri:
     if "?" in uri:
         uri += "&sslmode=require"
@@ -60,7 +60,7 @@ app.config.update(
     SQLALCHEMY_DATABASE_URI=uri,
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SECRET_KEY="dev-mitabo-secret-key-change-in-production",
-    MAX_CONTENT_LENGTH=1024 * 1024 * 1024,  # 1 Go max upload
+    MAX_CONTENT_LENGTH=1024 * 1024 * 1024,
     DEBUG=True,
     SQLALCHEMY_ENGINE_OPTIONS={
         "pool_size": 5,
@@ -86,45 +86,45 @@ app.config.update(
 db.init_app(app)
 migrate.init_app(app, db)
 
-# ✅ Import des modèles APRÈS l'initialisation
+# Import des modeles APRES l'initialisation
 from models import Video, Like, Xp, User, Follow, Comment
 
 # ------------------------------
-# Bloc retry connexion DB au démarrage (important pour Render)
+# Bloc retry connexion DB au demarrage (important pour Render)
 # ------------------------------
 with app.app_context():
     retries = 5
     for i in range(retries):
         try:
             db.session.execute(text("SELECT 1"))
-            print("✅ Connexion à la base de données réussie")
+            print("Connexion a la base de donnees reussie")
             break
         except OperationalError as e:
-            print(f"⚠️ Tentative {i+1}/{retries} : connexion DB échouée — {e}")
+            print(f"Tentative {i+1}/{retries} : connexion DB echouee — {e}")
             time.sleep(3)
     else:
-        raise RuntimeError("❌ Impossible de se connecter à la base après plusieurs tentatives")
+        raise RuntimeError("Impossible de se connecter a la base apres plusieurs tentatives")
 
 # ------------------------------
-# Middleware pour gérer les déconnexions DB
+# Middleware pour gerer les deconnexions DB
 # ------------------------------
 @app.before_request
 def before_request():
-    """Vérifie la connexion DB avant chaque requête"""
+    """Verifie la connexion DB avant chaque requete"""
     try:
         db.session.execute(text("SELECT 1"))
     except OperationalError:
-        print("⚠️ Connexion DB perdue, tentative de reconnexion...")
+        print("Connexion DB perdue, tentative de reconnexion...")
         db.session.rollback()
         try:
             db.session.execute(text("SELECT 1"))
-            print("✅ Reconnexion réussie")
+            print("Reconnexion reussie")
         except Exception as e:
-            print(f"❌ Reconnexion échouée: {e}")
+            print(f"Reconnexion echouee: {e}")
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
-    """Nettoie la session DB après chaque requête"""
+    """Nettoie la session DB apres chaque requete"""
     if exception:
         db.session.rollback()
     db.session.remove()
@@ -141,18 +141,18 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # ------------------------------
-# Supabase Storage centralisé
+# Supabase Storage centralise
 # ------------------------------
 from supabase_config import supabase, BUCKET_NAME
 
 # ------------------------------
-# Création automatique des tables (Render inclus)
+# Creation automatique des tables (Render inclus)
 # ------------------------------
 with app.app_context():
     db.create_all()
 
 # -------------------------
-# Données constantes
+# Donnees constantes
 # -------------------------
 CATEGORIES = [
     {"id": "tendance", "label": "Tendances"},
@@ -168,12 +168,12 @@ CATEGORIES = [
     {"id": "france", "label": "France"},
     {"id": "alsace", "label": "Alsace"},
     {"id": "paris", "label": "Paris"},
-    {"id": "iledefrance", "label": "Île de France"},
+    {"id": "iledefrance", "label": "Ile de France"},
     {"id": "grandest", "label": "Grand-Est"},
-    {"id": "actualite", "label": "Actualité"},
+    {"id": "actualite", "label": "Actualite"},
     {"id": "divertissement", "label": "Divertissement"},
-    {"id": "usa", "label": "États-Unis"},
-    {"id": "ue", "label": "L'Union Européenne"},
+    {"id": "usa", "label": "Etats-Unis"},
+    {"id": "ue", "label": "L'Union Europeenne"},
 ]
 CATEGORIES_MAP = {c["id"]: c for c in CATEGORIES}
 ALLOWED_EXTENSIONS = {"mp4", "webm", "ogg", "mov", "m4v"}
@@ -188,7 +188,7 @@ def ffmpeg_exists() -> bool:
     return shutil.which("ffmpeg") is not None
 
 def transcode_to_hls(input_path: str, target_dir: str) -> str:
-    """Transcode en HLS multi-qualité (360p, 720p). Retourne chemin relatif du master.m3u8."""
+    """Transcode en HLS multi-qualite (360p, 720p). Retourne chemin relatif du master.m3u8."""
     os.makedirs(target_dir, exist_ok=True)
     master_path = os.path.join(target_dir, "master.m3u8")
     
@@ -223,7 +223,7 @@ def transcode_to_hls(input_path: str, target_dir: str) -> str:
     return rel.replace("\\", "/")
 
 def init_db():
-    """Initialise la base de données avec des données de test"""
+    """Initialise la base de donnees avec des donnees de test"""
     with app.app_context():
         try:
             db.create_all()
@@ -232,14 +232,14 @@ def init_db():
                 u.set_password("demo1234")
                 db.session.add(u)
                 db.session.commit()
-                print("Utilisateur demo créé: demo@mitabo.dev / demo1234")
+                print("Utilisateur demo cree: demo@mitabo.dev / demo1234")
             
             if Video.query.count() == 0:
                 user = User.query.first()
                 if user:
                     demo = Video(
-                        title="Big Buck Bunny — Démo",
-                        description="Vidéo de démonstration pour Mitabo.",
+                        title="Big Buck Bunny - Demo",
+                        description="Video de demonstration pour Mitabo.",
                         category="film",
                         external_url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
                         thumb_url="https://picsum.photos/seed/mitabo-demo/640/360",
@@ -249,7 +249,7 @@ def init_db():
                     )
                     db.session.add(demo)
                     db.session.commit()
-                    print("Vidéo de démo créée")
+                    print("Video de demo creee")
         except Exception as e:
             print(f"Erreur lors de l'initialisation de la DB: {e}")
 
@@ -281,8 +281,7 @@ BASE_HTML = """<!DOCTYPE html>
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('upload_form') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Upload</a>
                     
-                    <!-- Bouton personnalisation fond d'écran -->
-                    <button onclick="openBackgroundModal()" class="p-2 rounded hover:bg-gray-100" title="Personnaliser le fond d'écran">
+                    <button onclick="openBackgroundModal()" class="p-2 rounded hover:bg-gray-100" title="Personnaliser le fond d'ecran">
                         <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                         </svg>
@@ -290,7 +289,6 @@ BASE_HTML = """<!DOCTYPE html>
                     
                     <span class="text-gray-700">{{ current_user.display_name }}</span>
                     
-                    <!-- Menu Hamburger -->
                     <div class="relative">
                         <button onclick="toggleMenu()" class="p-2 rounded hover:bg-gray-100" id="menu-button">
                             <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,7 +296,6 @@ BASE_HTML = """<!DOCTYPE html>
                             </svg>
                         </button>
                         
-                        <!-- Dropdown Menu -->
                         <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
                             <a href="{{ url_for('show_profil', username=current_user.display_name) }}" 
                                class="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-t-lg">
@@ -306,16 +303,16 @@ BASE_HTML = """<!DOCTYPE html>
                             </a>
                             <a href="{{ url_for('reglement') }}" 
                                class="block px-4 py-3 text-gray-700 hover:bg-gray-100">
-                                Règlement
+                                Reglement
                             </a>
                             <a href="{{ url_for('parametres') }}" 
                                class="block px-4 py-3 text-gray-700 hover:bg-gray-100">
-                                Paramètres
+                                Parametres
                             </a>
                             <hr class="my-1">
                             <a href="{{ url_for('logout') }}" 
                                class="block px-4 py-3 text-red-600 hover:bg-red-50 rounded-b-lg">
-                                Déconnexion
+                                Deconnexion
                             </a>
                         </div>
                     </div>
@@ -327,12 +324,11 @@ BASE_HTML = """<!DOCTYPE html>
         </div>
     </nav>
     
-    <!-- Modale de sélection de fond d'écran -->
     <div id="background-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div class="p-6">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold">Personnaliser le fond d'écran</h2>
+                    <h2 class="text-2xl font-bold">Personnaliser le fond d'ecran</h2>
                     <button onclick="closeBackgroundModal()" class="text-gray-500 hover:text-gray-700">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -341,17 +337,15 @@ BASE_HTML = """<!DOCTYPE html>
                 </div>
                 
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <!-- Par défaut -->
                     <div class="cursor-pointer group" onclick="setBackground('default')">
                         <div class="aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition">
                             <div class="w-full h-full flex items-center justify-center text-gray-400">
-                                <span class="text-sm">Par défaut</span>
+                                <span class="text-sm">Par defaut</span>
                             </div>
                         </div>
-                        <p class="text-center mt-2 text-sm font-medium">Par défaut</p>
+                        <p class="text-center mt-2 text-sm font-medium">Par defaut</p>
                     </div>
                     
-                    <!-- Nature -->
                     <div class="cursor-pointer group" onclick="setBackground('nature')">
                         <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
                              style="background-image: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800')">
@@ -359,7 +353,6 @@ BASE_HTML = """<!DOCTYPE html>
                         <p class="text-center mt-2 text-sm font-medium">Nature</p>
                     </div>
                     
-                    <!-- Plage -->
                     <div class="cursor-pointer group" onclick="setBackground('plage')">
                         <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
                              style="background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800')">
@@ -367,7 +360,6 @@ BASE_HTML = """<!DOCTYPE html>
                         <p class="text-center mt-2 text-sm font-medium">Plage</p>
                     </div>
                     
-                    <!-- Galaxy -->
                     <div class="cursor-pointer group" onclick="setBackground('galaxy')">
                         <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
                              style="background-image: url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=800')">
@@ -375,7 +367,6 @@ BASE_HTML = """<!DOCTYPE html>
                         <p class="text-center mt-2 text-sm font-medium">Galaxy</p>
                     </div>
                     
-                    <!-- Abstrait -->
                     <div class="cursor-pointer group" onclick="setBackground('abstrait')">
                         <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
                              style="background-image: url('https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800')">
@@ -383,7 +374,6 @@ BASE_HTML = """<!DOCTYPE html>
                         <p class="text-center mt-2 text-sm font-medium">Abstrait</p>
                     </div>
                     
-                    <!-- Montagne -->
                     <div class="cursor-pointer group" onclick="setBackground('montagne')">
                         <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
                              style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800')">
@@ -391,7 +381,6 @@ BASE_HTML = """<!DOCTYPE html>
                         <p class="text-center mt-2 text-sm font-medium">Montagne</p>
                     </div>
                     
-                    <!-- Ville -->
                     <div class="cursor-pointer group" onclick="setBackground('ville')">
                         <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
                              style="background-image: url('https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=800')">
@@ -399,7 +388,6 @@ BASE_HTML = """<!DOCTYPE html>
                         <p class="text-center mt-2 text-sm font-medium">Ville</p>
                     </div>
                     
-                    <!-- Coucher de soleil -->
                     <div class="cursor-pointer group" onclick="setBackground('sunset')">
                         <div class="aspect-video bg-cover bg-center rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
                              style="background-image: url('https://images.unsplash.com/photo-1495567720989-cebdbdd97913?w=800')">
@@ -407,7 +395,6 @@ BASE_HTML = """<!DOCTYPE html>
                         <p class="text-center mt-2 text-sm font-medium">Coucher de soleil</p>
                     </div>
                     
-                    <!-- Gradient -->
                     <div class="cursor-pointer group" onclick="setBackground('gradient')">
                         <div class="aspect-video rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition" 
                              style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
@@ -436,7 +423,6 @@ BASE_HTML = """<!DOCTYPE html>
     </footer>
     
     <script>
-        // Backgrounds disponibles
         const backgrounds = {
             'default': 'none',
             'nature': 'url("https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920")',
@@ -449,7 +435,6 @@ BASE_HTML = """<!DOCTYPE html>
             'gradient': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
         };
         
-        // Charger le fond d'écran sauvegardé au chargement de la page
         window.addEventListener('DOMContentLoaded', function() {
             const savedBg = localStorage.getItem('mitabo_background');
             if (savedBg && backgrounds[savedBg]) {
@@ -485,7 +470,6 @@ BASE_HTML = """<!DOCTYPE html>
             menu.classList.toggle('hidden');
         }
         
-        // Fermer le menu si on clique ailleurs
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('dropdown-menu');
             const button = document.getElementById('menu-button');
@@ -494,7 +478,6 @@ BASE_HTML = """<!DOCTYPE html>
             }
         });
         
-        // Fermer la modale si on clique en dehors
         document.getElementById('background-modal')?.addEventListener('click', function(event) {
             if (event.target === this) {
                 closeBackgroundModal();
@@ -548,7 +531,7 @@ HOME_BODY = """
             </div>
         {% else %}
             <div class="col-span-full text-center py-8">
-                <p class="text-gray-500">Aucune vidéo trouvée.</p>
+                <p class="text-gray-500">Aucune video trouvee.</p>
             </div>
         {% endfor %}
     </div>
@@ -562,7 +545,7 @@ WATCH_BODY = """
             <div class="bg-black rounded-lg overflow-hidden mb-4">
                 <video id="video-player" controls class="w-full h-auto max-h-96">
                     <source src="{{ video.source_url }}" type="video/mp4">
-                    Votre navigateur ne supporte pas la lecture vidéo.
+                    Votre navigateur ne supporte pas la lecture video.
                 </video>
             </div>
             
@@ -600,7 +583,6 @@ WATCH_BODY = """
                 <p>{{ video.description or "Aucune description" }}</p>
             </div>
             
-            <!-- Commentaires -->
             {% if current_user.is_authenticated %}
                 <form method="post" action="{{ url_for('comment_post', video_id=video.id) }}" class="mb-6">
                     <textarea name="body" placeholder="Ajouter un commentaire..." 
@@ -614,7 +596,7 @@ WATCH_BODY = """
                     <div class="bg-white p-4 rounded-lg shadow-sm">
                         <div class="flex items-center space-x-2 mb-2">
                             <strong>{{ comment.user.display_name }}</strong>
-                            <span class="text-gray-500 text-sm">{{ comment.created_at.strftime('%d %b %Y à %H:%M') }}</span>
+                            <span class="text-gray-500 text-sm">{{ comment.created_at.strftime('%d %b %Y a %H:%M') }}</span>
                         </div>
                         <p>{{ comment.body }}</p>
                     </div>
@@ -624,7 +606,6 @@ WATCH_BODY = """
             </div>
         </div>
         
-        <!-- Suggestions -->
         <div class="space-y-4">
             <h3 class="font-semibold text-lg">Suggestions</h3>
             {% for suggestion in more %}
@@ -684,7 +665,6 @@ function giveXp(videoId) {
         .catch(err => console.error('Erreur XP:', err));
 }
 
-// HLS support
 const video = document.getElementById('video-player');
 const videoSrc = '{{ video.source_url }}';
 if (Hls.isSupported() && videoSrc.includes('.m3u8')) {
@@ -700,12 +680,12 @@ if (Hls.isSupported() && videoSrc.includes('.m3u8')) {
 
 UPLOAD_BODY = """
 <main class="container mx-auto px-4 py-8">
-    <h1 class="text-2xl font-bold mb-6">Téléverser une vidéo</h1>
+    <h1 class="text-2xl font-bold mb-6">Televerser une video</h1>
     
     <form method="post" enctype="multipart/form-data" class="max-w-2xl">
         <div class="space-y-4">
             <div>
-                <label class="block text-sm font-medium mb-1">Fichier vidéo</label>
+                <label class="block text-sm font-medium mb-1">Fichier video</label>
                 <input name="file" type="file" accept="video/*" required 
                        class="w-full px-3 py-2 border rounded-lg">
             </div>
@@ -723,7 +703,7 @@ UPLOAD_BODY = """
             </div>
             
             <div>
-                <label class="block text-sm font-medium mb-1">Catégorie</label>
+                <label class="block text-sm font-medium mb-1">Categorie</label>
                 <select name="category" class="w-full px-3 py-2 border rounded-lg">
                     {% for cat in categories %}
                         <option value="{{ cat.id }}">{{ cat.label }}</option>
@@ -732,7 +712,7 @@ UPLOAD_BODY = """
             </div>
             
             <div>
-                <label class="block text-sm font-medium mb-1">Créateur</label>
+                <label class="block text-sm font-medium mb-1">Createur</label>
                 <input name="creator" type="text" value="{{ current_user.display_name }}" 
                        class="w-full px-3 py-2 border rounded-lg">
             </div>
@@ -745,7 +725,7 @@ UPLOAD_BODY = """
             </div>
             
             <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
-                Téléverser
+                Televerser
             </button>
         </div>
     </form>
@@ -778,7 +758,7 @@ AUTH_BODY = """
         {% if mode == 'login' %}
             <p>Pas de compte ? <a href="{{ url_for('register') }}" class="text-blue-600">S'inscrire</a></p>
         {% else %}
-            <p>Déjà un compte ? <a href="{{ url_for('login') }}" class="text-blue-600">Se connecter</a></p>
+            <p>Deja un compte ? <a href="{{ url_for('login') }}" class="text-blue-600">Se connecter</a></p>
         {% endif %}
     </div>
 </main>
@@ -787,27 +767,23 @@ AUTH_BODY = """
 PROFIL_BODY = """
 <main class="container mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto">
-        <!-- En-tête du profil -->
         <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div class="flex items-start space-x-6">
-                <!-- Avatar -->
                 <div class="flex-shrink-0">
                     <img src="{{ user.avatar_url or 'https://ui-avatars.com/api/?name=' + user.display_name|urlencode + '&size=120&background=3b82f6&color=fff' }}" 
                          alt="Avatar de {{ user.display_name }}" 
                          class="w-32 h-32 rounded-full border-4 border-blue-500 object-cover">
                 </div>
                 
-                <!-- Informations -->
                 <div class="flex-1">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-3xl font-bold">{{ user.display_name }}</h2>
                         
-                        <!-- Bouton follow/unfollow -->
                         {% if current_user.is_authenticated and current_user.id != user.id %}
                             {% if is_following %}
                                 <button onclick="followUser({{ user.id }})" id="follow-btn" 
                                         class="px-6 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 transition">
-                                    Se désabonner
+                                    Se desabonner
                                 </button>
                             {% else %}
                                 <button onclick="followUser({{ user.id }})" id="follow-btn" 
@@ -823,22 +799,20 @@ PROFIL_BODY = """
                         {% endif %}
                     </div>
                     
-                    <!-- Bio -->
                     {% if user.bio %}
                     <p class="text-gray-700 mb-4 italic">"{{ user.bio }}"</p>
                     {% else %}
                     <p class="text-gray-400 mb-4 italic">Aucune bio pour le moment</p>
                     {% endif %}
                     
-                    <!-- Statistiques -->
                     <div class="flex space-x-6 text-sm">
                         <div>
                             <span class="font-semibold text-gray-800">{{ videos|length }}</span>
-                            <span class="text-gray-600">vidéos</span>
+                            <span class="text-gray-600">videos</span>
                         </div>
                         <div>
                             <span class="font-semibold text-gray-800" id="followers-count">{{ user.followers_count }}</span>
-                            <span class="text-gray-600">abonnés</span>
+                            <span class="text-gray-600">abonnes</span>
                         </div>
                         <div>
                             <span class="font-semibold text-gray-800">{{ user.following_count }}</span>
@@ -853,9 +827,8 @@ PROFIL_BODY = """
             </div>
         </div>
         
-        <!-- Vidéos de l'utilisateur -->
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <h3 class="text-xl font-semibold mb-4">Vidéos de {{ user.display_name }}</h3>
+            <h3 class="text-xl font-semibold mb-4">Videos de {{ user.display_name }}</h3>
             
             {% if videos %}
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -887,7 +860,7 @@ PROFIL_BODY = """
                     <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                     </svg>
-                    <p>Aucune vidéo postée pour le moment.</p>
+                    <p>Aucune video postee pour le moment.</p>
                 </div>
             {% endif %}
         </div>
@@ -903,31 +876,7 @@ function followUser(userId) {
             const followersCount = document.getElementById('followers-count');
             
             if (data.following) {
-                btn.textContent = 'Se désabonner';
-                btn.className = 'px-6 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 transition';
-                followersCount.textContent = parseInt(followersCount.textContent) + 1;
-            } else {
-                btn.textContent = "S'abonner";
-                btn.className = 'px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition';
-                followersCount.textContent = Math.max(0, parseInt(followersCount.textContent) - 1);
-            }
-        })
-        .catch(err => console.error('Erreur follow:', err));
-}
-</script>
-""">
-</main>
-
-<script>
-function followUser(userId) {
-    fetch(`/follow/${userId}`, {method: 'POST'})
-        .then(r => r.json())
-        .then(data => {
-            const btn = document.getElementById('follow-btn');
-            const followersCount = document.getElementById('followers-count');
-            
-            if (data.following) {
-                btn.textContent = 'Se désabonner';
+                btn.textContent = 'Se desabonner';
                 btn.className = 'px-6 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 transition';
                 followersCount.textContent = parseInt(followersCount.textContent) + 1;
             } else {
@@ -957,17 +906,16 @@ def register():
 
         existing = User.query.filter_by(display_name=username).first()
         if existing:
-            flash("Ce nom d'utilisateur existe déjà.")
+            flash("Ce nom d'utilisateur existe deja.")
             return redirect(url_for("register"))
 
         hashed = generate_password_hash(password)
-        # Générer un email automatique basé sur le username
         email = f"{username.lower().replace(' ', '')}@mitabo.local"
         new_user = User(display_name=username, email=email, password_hash=hashed)
         db.session.add(new_user)
         db.session.commit()
 
-        flash("✅ Inscription réussie, vous pouvez vous connecter.")
+        flash("Inscription reussie, vous pouvez vous connecter.")
         return redirect(url_for("login"))
 
     body = render_template_string(AUTH_BODY, mode='register', heading='Inscription', cta='S\'inscrire')
@@ -985,7 +933,7 @@ def login():
             return redirect(url_for("login"))
 
         login_user(user)
-        flash(f"Bienvenue, {user.display_name} 👋")
+        flash(f"Bienvenue, {user.display_name}")
         return redirect(url_for("home"))
 
     body = render_template_string(AUTH_BODY, mode='login', heading='Connexion', cta='Se connecter')
@@ -995,46 +943,45 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash("Vous êtes déconnecté.")
+    flash("Vous etes deconnecte.")
     return redirect(url_for("login"))
 
 # -------------------------
-# Routes Règlement et Paramètres
+# Routes Reglement et Parametres
 # -------------------------
 @app.route("/reglement")
 def reglement():
-    """Page du règlement de la plateforme"""
-    # Utiliser un template sans CSS inline problématique
+    """Page du reglement de la plateforme"""
     html_content = """
     <main class="container mx-auto px-4 py-8">
         <div style="max-width: 900px; margin: 32px auto; background: #fff; border-radius: 8px; box-shadow: 0 6px 18px rgba(17, 17, 17, 0.06); padding: 28px;">
             <header style="margin-bottom: 24px;">
-                <h1 style="margin: 0 0 8px 0; font-size: 24px; letter-spacing: 0.2px; font-weight: bold;">Règlement Officiel de Mitabo</h1>
+                <h1 style="margin: 0 0 8px 0; font-size: 24px; letter-spacing: 0.2px; font-weight: bold;">Reglement Officiel de Mitabo</h1>
                 <div style="color: #6b7280; font-size: 13px;">Version officielle - Ton administratif</div>
             </header>
             
             <section style="margin-bottom: 12px;">
-<h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 1 - Objet du reglement</h2>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 1 - Objet du reglement</h2>
                 <p style="line-height: 1.55; font-size: 15px;">Le present reglement a pour objet de definir les conditions de publication, de diffusion et d'utilisation de la plateforme <strong>Mitabo</strong>. Il vise a assurer un environnement respectueux, creatif et conforme a la legislation en vigueur.</p>
             </section>
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 2 - Format et durée des vidéos</h2>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 2 - Format et duree des videos</h2>
                 <ol style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
-                    <li>Les vidéos publiées sur Mitabo doivent avoir une durée comprise entre <strong>3 et 5 minutes</strong>.</li>
-                    <li>Le format recommandé est horizontal (16:9) avec une qualité minimale de 720p (HD).</li>
-                    <li>Les vidéos doivent être montées, finalisées et conformes aux standards de qualité avant leur mise en ligne.</li>
+                    <li>Les videos publiees sur Mitabo doivent avoir une duree comprise entre <strong>3 et 5 minutes</strong>.</li>
+                    <li>Le format recommande est horizontal (16:9) avec une qualite minimale de 720p (HD).</li>
+                    <li>Les videos doivent etre montees, finalisees et conformes aux standards de qualite avant leur mise en ligne.</li>
                 </ol>
             </section>
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 3 - Contenu autorisé</h2>
-                <p style="line-height: 1.55; font-size: 15px;">Sont autorisés :</p>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 3 - Contenu autorise</h2>
+                <p style="line-height: 1.55; font-size: 15px;">Sont autorises :</p>
                 <ul style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
-                    <li>Les créations originales (documentaires, tutoriels, vlogs, courts-métrages, etc.) ;</li>
-                    <li>Les contenus respectueux de la loi, des droits d'auteur et de la dignité des personnes ;</li>
+                    <li>Les creations originales (documentaires, tutoriels, vlogs, courts-metrages, etc.) ;</li>
+                    <li>Les contenus respectueux de la loi, des droits d'auteur et de la dignite des personnes ;</li>
                     <li>Les musiques et extraits sous licence libre ou disposant d'une autorisation d'utilisation.</li>
                 </ul>
             </section>
@@ -1044,9 +991,9 @@ def reglement():
                 <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 4 - Contenu interdit</h2>
                 <p style="line-height: 1.55; font-size: 15px;">Sont formellement interdits :</p>
                 <ul style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
-                    <li>Les propos ou images à caractère haineux, violent, discriminatoire ou diffamatoire ;</li>
-                    <li>Les contenus mensongers, trompeurs ou incitant à des comportements dangereux ;</li>
-                    <li>La diffusion de données personnelles sans consentement préalable ;</li>
+                    <li>Les propos ou images a caractere haineux, violent, discriminatoire ou diffamatoire ;</li>
+                    <li>Les contenus mensongers, trompeurs ou incitant a des comportements dangereux ;</li>
+                    <li>La diffusion de donnees personnelles sans consentement prealable ;</li>
                     <li>Toute forme de plagiat ou d'atteinte aux droits d'autrui.</li>
                 </ul>
             </section>
@@ -1056,69 +1003,66 @@ def reglement():
                 <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 5 - Comportement des utilisateurs</h2>
                 <p style="line-height: 1.55; font-size: 15px;">Les utilisateurs de Mitabo doivent :</p>
                 <ul style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
-                    <li>Adopter une attitude respectueuse envers la communauté et l'équipe de modération ;</li>
-                    <li>Publier et commenter de manière constructive et courtoise ;</li>
-                    <li>Signaler tout contenu non conforme au présent règlement.</li>
+                    <li>Adopter une attitude respectueuse envers la communaute et l'equipe de moderation ;</li>
+                    <li>Publier et commenter de maniere constructive et courtoise ;</li>
+                    <li>Signaler tout contenu non conforme au present reglement.</li>
                 </ul>
             </section>
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
                 <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 6 - Sanctions</h2>
-                <p style="line-height: 1.55; font-size: 15px;">Tout manquement au présent règlement pourra entraîner :</p>
+                <p style="line-height: 1.55; font-size: 15px;">Tout manquement au present reglement pourra entrainer :</p>
                 <ol style="padding-left: 1.2em; line-height: 1.55; font-size: 15px;">
-                    <li>Un avertissement écrit adressé à l'utilisateur concerné ;</li>
-                    <li>Une suspension temporaire du compte en cas de récidive ;</li>
-                    <li>Une exclusion définitive en cas de manquement grave ou répété.</li>
+                    <li>Un avertissement ecrit adresse a l'utilisateur concerne ;</li>
+                    <li>Une suspension temporaire du compte en cas de recidive ;</li>
+                    <li>Une exclusion definitive en cas de manquement grave ou repete.</li>
                 </ol>
-                <p style="line-height: 1.55; font-size: 15px;">Les décisions de modération sont prises avec impartialité et dans le respect du droit d'expression de chacun.</p>
+                <p style="line-height: 1.55; font-size: 15px;">Les decisions de moderation sont prises avec impartialite et dans le respect du droit d'expression de chacun.</p>
             </section>
             <hr style="border: none; border-top: 1px solid #e6e9ee; margin: 22px 0;" />
             
             <section style="margin-bottom: 12px;">
-                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 7 - Entrée en vigueur</h2>
-                <p style="line-height: 1.55; font-size: 15px;">Le présent règlement entre en vigueur à compter de sa publication officielle sur la plateforme Mitabo. Toute utilisation du service implique l'acceptation sans réserve des dispositions énoncées ci-dessus.</p>
+                <h2 style="font-size: 18px; margin: 18px 0 8px; font-weight: 600;">Article 7 - Entree en vigueur</h2>
+                <p style="line-height: 1.55; font-size: 15px;">Le present reglement entre en vigueur a compter de sa publication officielle sur la plateforme Mitabo. Toute utilisation du service implique l'acceptation sans reserve des dispositions enoncees ci-dessus.</p>
             </section>
             
             <div style="color: #6b7280; font-size: 13px; margin-top: 18px; text-align: center;">
-                <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">Retour à l'accueil</a>
+                <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">Retour a l'accueil</a>
             </div>
         </div>
     </main>
     """
-    return render_template_string(BASE_HTML, body=html_content, year=datetime.utcnow().year, title="Règlement Officiel - Mitabo")
+    return render_template_string(BASE_HTML, body=html_content, year=datetime.utcnow().year, title="Reglement Officiel - Mitabo")
 
 @app.route("/parametres", methods=["GET", "POST"])
 @login_required
 def parametres():
-    """Page des paramètres utilisateur"""
+    """Page des parametres utilisateur"""
     if request.method == "POST":
         action = request.form.get("action")
         
         if action == "profile":
-            # Mise à jour du profil
             new_display_name = request.form.get("display_name", "").strip()
             new_email = request.form.get("email", "").strip()
             new_bio = request.form.get("bio", "").strip()
             new_avatar_url = request.form.get("avatar_url", "").strip()
             
             if new_display_name and new_display_name != current_user.display_name:
-                # Vérifier si le nom n'est pas déjà pris
                 existing = User.query.filter_by(display_name=new_display_name).first()
                 if existing and existing.id != current_user.id:
-                    flash("❌ Ce nom d'utilisateur est déjà pris")
+                    flash("Ce nom d'utilisateur est deja pris")
                 else:
                     current_user.display_name = new_display_name
-                    flash("✅ Nom d'affichage mis à jour")
+                    flash("Nom d'affichage mis a jour")
             
             if new_email and new_email != current_user.email:
-                # Vérifier si l'email n'est pas déjà pris
                 existing = User.query.filter_by(email=new_email).first()
                 if existing and existing.id != current_user.id:
-                    flash("❌ Cet email est déjà utilisé")
+                    flash("Cet email est deja utilise")
                 else:
                     current_user.email = new_email
-                    flash("✅ Email mis à jour")
+                    flash("Email mis a jour")
             
             current_user.bio = new_bio
             current_user.avatar_url = new_avatar_url if new_avatar_url else None
@@ -1127,29 +1071,27 @@ def parametres():
             return redirect(url_for("parametres"))
         
         elif action == "password":
-            # Changement de mot de passe
             current_password = request.form.get("current_password")
             new_password = request.form.get("new_password")
             confirm_password = request.form.get("confirm_password")
             
             if not current_user.check_password(current_password):
-                flash("❌ Mot de passe actuel incorrect")
+                flash("Mot de passe actuel incorrect")
             elif new_password != confirm_password:
-                flash("❌ Les nouveaux mots de passe ne correspondent pas")
+                flash("Les nouveaux mots de passe ne correspondent pas")
             elif len(new_password) < 6:
-                flash("❌ Le mot de passe doit contenir au moins 6 caractères")
+                flash("Le mot de passe doit contenir au moins 6 caracteres")
             else:
                 current_user.set_password(new_password)
                 db.session.commit()
-                flash("✅ Mot de passe modifié avec succès")
+                flash("Mot de passe modifie avec succes")
             
             return redirect(url_for("parametres"))
     
     body = """
     <main class="container mx-auto px-4 py-8 max-w-3xl">
-        <h1 class="text-3xl font-bold mb-6">⚙️ Paramètres</h1>
+        <h1 class="text-3xl font-bold mb-6">Parametres</h1>
         
-        <!-- Onglets -->
         <div class="flex space-x-4 mb-6 border-b">
             <button onclick="showTab('profile')" id="tab-profile" 
                     class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-600">
@@ -1157,15 +1099,13 @@ def parametres():
             </button>
             <button onclick="showTab('security')" id="tab-security" 
                     class="px-4 py-2 font-medium border-b-2 border-transparent text-gray-600 hover:text-blue-600">
-                Sécurité
+                Securite
             </button>
         </div>
         
-        <!-- Onglet Profil -->
         <div id="content-profile" class="bg-white rounded-lg shadow-sm p-6">
             <h2 class="text-xl font-semibold mb-4">Personnalisation du profil</h2>
             
-            <!-- Aperçu de l'avatar -->
             <div class="mb-6 flex items-center space-x-4">
                 <img id="avatar-preview" 
                      src="{{ current_user.avatar_url or 'https://ui-avatars.com/api/?name=' + current_user.display_name|urlencode + '&size=120&background=3b82f6&color=fff' }}" 
@@ -1184,7 +1124,7 @@ def parametres():
                     <label class="block text-sm font-medium mb-1">Nom d'affichage</label>
                     <input name="display_name" type="text" value="{{ current_user.display_name }}" 
                            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" required>
-                    <p class="text-xs text-gray-500 mt-1">C'est le nom qui apparaîtra sur votre profil</p>
+                    <p class="text-xs text-gray-500 mt-1">C'est le nom qui apparaitra sur votre profil</p>
                 </div>
                 
                 <div>
@@ -1198,7 +1138,7 @@ def parametres():
                     <textarea name="bio" rows="4" 
                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" 
                               placeholder="Parlez-nous de vous...">{{ current_user.bio or '' }}</textarea>
-                    <p class="text-xs text-gray-500 mt-1">Décrivez-vous en quelques mots (max 500 caractères)</p>
+                    <p class="text-xs text-gray-500 mt-1">Decrivez-vous en quelques mots (max 500 caracteres)</p>
                 </div>
                 
                 <div>
@@ -1217,7 +1157,7 @@ def parametres():
                 
                 <div class="pt-4">
                     <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition">
-                        💾 Enregistrer les modifications
+                        Enregistrer les modifications
                     </button>
                 </div>
             </form>
@@ -1227,15 +1167,14 @@ def parametres():
             <div>
                 <h3 class="text-lg font-semibold mb-2">Informations du compte</h3>
                 <p class="text-gray-600 text-sm">Membre depuis : {{ current_user.created_at.strftime('%d %B %Y') }}</p>
-                <p class="text-gray-600 text-sm">Nombre de vidéos : {{ current_user.videos|length }}</p>
-                <p class="text-gray-600 text-sm">Abonnés : {{ current_user.followers_count }}</p>
+                <p class="text-gray-600 text-sm">Nombre de videos : {{ current_user.videos|length }}</p>
+                <p class="text-gray-600 text-sm">Abonnes : {{ current_user.followers_count }}</p>
                 <p class="text-gray-600 text-sm">Abonnements : {{ current_user.following_count }}</p>
             </div>
         </div>
         
-        <!-- Onglet Sécurité -->
         <div id="content-security" class="hidden bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-xl font-semibold mb-4">Sécurité du compte</h2>
+            <h2 class="text-xl font-semibold mb-4">Securite du compte</h2>
             
             <form method="POST" class="space-y-4">
                 <input type="hidden" name="action" value="password">
@@ -1250,7 +1189,7 @@ def parametres():
                     <label class="block text-sm font-medium mb-1">Nouveau mot de passe</label>
                     <input name="new_password" type="password" 
                            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" required>
-                    <p class="text-xs text-gray-500 mt-1">Minimum 6 caractères</p>
+                    <p class="text-xs text-gray-500 mt-1">Minimum 6 caracteres</p>
                 </div>
                 
                 <div>
@@ -1261,37 +1200,32 @@ def parametres():
                 
                 <div class="pt-4">
                     <button type="submit" class="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition">
-                        🔒 Modifier le mot de passe
+                        Modifier le mot de passe
                     </button>
                 </div>
             </form>
         </div>
         
         <div class="mt-6 text-center">
-            <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">← Retour à l'accueil</a>
+            <a href="{{ url_for('home') }}" class="text-blue-600 hover:text-blue-800">Retour a l'accueil</a>
         </div>
     </main>
     
     <script>
-        // Gestion des onglets
         function showTab(tabName) {
-            // Cacher tous les contenus
             document.getElementById('content-profile').classList.add('hidden');
             document.getElementById('content-security').classList.add('hidden');
             
-            // Désactiver tous les onglets
             document.getElementById('tab-profile').classList.remove('border-blue-500', 'text-blue-600');
             document.getElementById('tab-profile').classList.add('border-transparent', 'text-gray-600');
             document.getElementById('tab-security').classList.remove('border-blue-500', 'text-blue-600');
             document.getElementById('tab-security').classList.add('border-transparent', 'text-gray-600');
             
-            // Afficher le contenu sélectionné
             document.getElementById('content-' + tabName).classList.remove('hidden');
             document.getElementById('tab-' + tabName).classList.remove('border-transparent', 'text-gray-600');
             document.getElementById('tab-' + tabName).classList.add('border-blue-500', 'text-blue-600');
         }
         
-        // Prévisualisation de l'avatar
         document.getElementById('avatar-url-input').addEventListener('input', function(e) {
             const url = e.target.value;
             if (url) {
@@ -1302,7 +1236,7 @@ def parametres():
         });
     </script>
     """
-    return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Paramètres — Mitabo")
+    return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Parametres - Mitabo")
 
 # -------------------------
 # Routes principales
@@ -1327,7 +1261,7 @@ def home():
             categories=CATEGORIES,
             categories_map=CATEGORIES_MAP,
         )
-        return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Mitabo — Accueil")
+        return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Mitabo - Accueil")
     except Exception as e:
         print(f"Erreur dans home(): {e}")
         return f"Erreur: {e}", 500
@@ -1383,7 +1317,7 @@ def watch(video_id: int):
 def upload_form():
     try:
         body = render_template_string(UPLOAD_BODY, categories=CATEGORIES)
-        return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Téléverser — Mitabo")
+        return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Televerser - Mitabo")
     except Exception as e:
         print(f"Erreur dans upload_form(): {e}")
         return f"Erreur: {e}", 500
@@ -1393,7 +1327,7 @@ def upload_form():
 def upload_post():
     try:
         f = request.files.get("file")
-        print("DEBUG: fichier reçu =", f.filename if f else None, "mimetype =", f.mimetype if f else None)
+        print("DEBUG: fichier recu =", f.filename if f else None, "mimetype =", f.mimetype if f else None)
 
         title = (request.form.get("title") or "Sans titre").strip()
         description = (request.form.get("description") or "").strip()
@@ -1402,10 +1336,10 @@ def upload_post():
         to_hls = request.form.get("to_hls") is not None
 
         if not f or f.filename == "":
-            flash("Aucun fichier reçu")
+            flash("Aucun fichier recu")
             return redirect(url_for("upload_form"))
         if not allowed_file(f.filename):
-            flash("Extension non supportée")
+            flash("Extension non supportee")
             return redirect(url_for("upload_form"))
 
         filename = secure_filename(f.filename)
@@ -1419,10 +1353,9 @@ def upload_post():
         file_path = os.path.join(UPLOAD_DIR, final)
         os.makedirs(UPLOAD_DIR, exist_ok=True)
         f.save(file_path)
-        print("DEBUG: fichier sauvegardé =", file_path)
+        print("DEBUG: fichier sauvegarde =", file_path)
 
         public_url = None
-        # Upload vers Supabase OBLIGATOIRE
         if supabase:
             try:
                 with open(file_path, "rb") as file_data:
@@ -1431,27 +1364,24 @@ def upload_post():
                         file_data,
                         {"content-type": f.mimetype or "video/mp4"}
                     )
-                print("DEBUG: réponse Supabase =", res)
+                print("DEBUG: reponse Supabase =", res)
 
-                # Récupérer l'URL publique
                 public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(f"videos/{final}")
                 print("DEBUG: URL publique Supabase =", public_url)
 
             except Exception as e:
                 print(f"Erreur upload vers Supabase: {e}")
                 flash(f"Erreur lors de l'upload Supabase: {e}")
-                # Supprimer le fichier local et abandonner
                 if os.path.exists(file_path):
                     os.remove(file_path)
                 return redirect(url_for("upload_form"))
         else:
-            flash("Supabase non configuré - impossible d'uploader")
+            flash("Supabase non configure - impossible d'uploader")
             return redirect(url_for("upload_form"))
 
-        # Supprimer le fichier local après upload réussi vers Supabase
         if os.path.exists(file_path):
             os.remove(file_path)
-            print("DEBUG: fichier local supprimé après upload Supabase")
+            print("DEBUG: fichier local supprime apres upload Supabase")
 
         v = Video(
             title=title,
@@ -1462,13 +1392,13 @@ def upload_post():
             duration="",
             creator=creator,
             user_id=current_user.id,
-            external_url=public_url  # Utiliser l'URL Supabase
+            external_url=public_url
         )
 
         db.session.add(v)
         db.session.commit()
 
-        flash("✅ Vidéo uploadée avec succès sur Supabase !")
+        flash("Video uploadee avec succes sur Supabase !")
         return redirect(url_for("watch", video_id=v.id))
 
     except Exception as e:
@@ -1488,7 +1418,7 @@ def hls(filename):
 
 @app.get("/media/<path:filename>")
 def media(filename):
-    """Route pour servir les fichiers vidéo uploadés localement"""
+    """Route pour servir les fichiers video uploades localement"""
     try:
         return send_from_directory(UPLOAD_DIR, filename, as_attachment=False)
     except Exception as e:
@@ -1655,7 +1585,7 @@ def show_profil(username):
 def follow_user(user_id):
     try:
         if user_id == current_user.id:
-            return jsonify({"error": "Vous ne pouvez pas vous suivre vous-même"}), 400
+            return jsonify({"error": "Vous ne pouvez pas vous suivre vous-meme"}), 400
         
         target_user = User.query.get_or_404(user_id)
         existing = Follow.query.filter_by(follower_id=current_user.id, followed_id=user_id).first()
@@ -1681,7 +1611,7 @@ def follow_user(user_id):
 def ban_user(user_id):
     try:
         if not current_user.is_admin:
-            flash("Accès refusé")
+            flash("Acces refuse")
             return redirect(url_for("home"))
         
         user = User.query.get_or_404(user_id)
@@ -1701,7 +1631,7 @@ def ban_user(user_id):
 def promote_user(user_id):
     try:
         if not current_user.is_admin:
-            flash("Accès refusé")
+            flash("Acces refuse")
             return redirect(url_for("home"))
         
         user = User.query.get_or_404(user_id)
@@ -1734,13 +1664,13 @@ def favicon():
 # -------------------------
 @app.errorhandler(404)
 def not_found_error(error):
-    body = "<main class='container mx-auto px-4 py-8 text-center'><h1 class='text-2xl font-bold'>Page non trouvée</h1><p class='mt-4'><a href='" + url_for('home') + "' class='text-blue-600'>Retour à l'accueil</a></p></main>"
+    body = "<main class='container mx-auto px-4 py-8 text-center'><h1 class='text-2xl font-bold'>Page non trouvee</h1><p class='mt-4'><a href='" + url_for('home') + "' class='text-blue-600'>Retour a l'accueil</a></p></main>"
     return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Erreur 404"), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
-    body = "<main class='container mx-auto px-4 py-8 text-center'><h1 class='text-2xl font-bold'>Erreur interne</h1><p class='mt-4'><a href='" + url_for('home') + "' class='text-blue-600'>Retour à l'accueil</a></p></main>"
+    body = "<main class='container mx-auto px-4 py-8 text-center'><h1 class='text-2xl font-bold'>Erreur interne</h1><p class='mt-4'><a href='" + url_for('home') + "' class='text-blue-600'>Retour a l'accueil</a></p></main>"
     return render_template_string(BASE_HTML, body=body, year=datetime.utcnow().year, title="Erreur 500"), 500
 
 # -------------------------
@@ -1748,11 +1678,11 @@ def internal_error(error):
 # -------------------------
 @app.cli.command()
 def init_database():
-    """Initialise la base de données"""
+    """Initialise la base de donnees"""
     init_db()
 
 # -------------------------
-# Entrée app
+# Entree app
 # -------------------------
 if __name__ == "__main__":
     init_db()
