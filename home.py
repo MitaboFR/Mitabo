@@ -48,12 +48,12 @@ if not uri:
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-# Force SSL pour Supabase si necessaire
+# Force SSL prefer pour Supabase si necessaire
 if "supabase.co" in uri and "sslmode=" not in uri:
     if "?" in uri:
-        uri += "&sslmode=require"
+        uri += "&sslmode=prefer"
     else:
-        uri += "?sslmode=require"
+        uri += "?sslmode=prefer"
 
 # Configuration SQLAlchemy + app
 app.config.update(
@@ -1687,6 +1687,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
