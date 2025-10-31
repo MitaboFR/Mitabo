@@ -63,19 +63,20 @@ app.config.update(
     MAX_CONTENT_LENGTH=1024 * 1024 * 1024,
     DEBUG=True,
     SQLALCHEMY_ENGINE_OPTIONS={
-        "pool_size": 5,
-        "max_overflow": 10,
-        "pool_timeout": 30,
-        "pool_pre_ping": True,
-        "pool_recycle": 300,
-        "connect_args": {
-            "sslmode": "require",
-            "connect_timeout": 10,
-            "keepalives": 1,
-            "keepalives_idle": 30,
-            "keepalives_interval": 10,
-            "keepalives_count": 5,
-            "options": "-c statement_timeout=30000"
+    "pool_size": 5,
+    "max_overflow": 10,
+    "pool_timeout": 30,
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+    "connect_args": {
+        "connect_timeout": 10,
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+        "options": "-c statement_timeout=30000"
+    }
+}
         }
     }
 )
@@ -1687,6 +1688,7 @@ def init_database():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
 
 
