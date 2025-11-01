@@ -23,21 +23,6 @@ from sqlalchemy.exc import OperationalError
 from extensions import db, migrate
 
 # ------------------------------
-# Désactive les fonctionnalités PostgreSQL non essentielles
-# ------------------------------
-import sqlalchemy.dialects.postgresql as pg_dialect
-
-# Empêche psycopg2 de charger hstore (qui cause des problèmes SSL)
-original_initialize = pg_dialect.psycopg2.PGDialect_psycopg2.initialize
-
-def patched_initialize(self, connection):
-    original_initialize(self, connection)
-    self.supports_native_enum = False
-    self._hstore_oids = lambda conn: (None, None)
-    
-pg_dialect.psycopg2.PGDialect_psycopg2.initialize = patched_initialize
-
-# ------------------------------
 # Configuration des repertoires
 # ------------------------------
 BASE_DIR = os.path.dirname(__file__)
@@ -59,55 +44,88 @@ uri = os.getenv("DATABASE_URL")
 if not uri:
     raise RuntimeError("DATABASE_URL not set! Configure it in Render environment variables.")
 
-uri = os.getenv("DATABASE_URL")
-if not uri:
-    raise RuntimeError("DATABASE_URL not set! Configure it in Render environment variables.")
-
-# Corrige l'ancien format postgres://
+# Corrige pour pg8000 (driver Python pur, sans problèmes SSL)
 if uri.startswith("postgres://"):
-    uri = uri.replace("postgres://", "postgresql://", 1)
+    uri = uri.replace("postgres://", "postgresql+pg8000://", 1)
+elif uri.startswith("postgresql://"):
+    uri = uri.replace("postgresql://", "postgresql+pg8000://", 1)
 
-# Force SSL require pour Supabase/Render
-if "sslmode=" in uri:
-    uri = uri.replace("sslmode=prefer", "sslmode=require")
-    uri = uri.replace("sslmode=disable", "sslmode=require")
-elif "?" in uri:
-    uri += "&sslmode=require"
+# Ajoute SSL pour pg8000
+if "?" not in uri:
+    uri += "?ssl_context=true"
 else:
-    uri += "?sslmode=require"
+    uri += "&ssl_context=true"
 
-print(f"🔗 Connexion DB: {uri.split('@')[0]}@...")  # Log sans password
+print(f"🔗 Connexion DB configurée")
 
 # Configuration SQLAlchemy + app
 app.config.update(
     SQLALCHEMY_DATABASE_URI=uri,
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    SECRET_KEY="dev-mitabo-secret-key-change-in-production",
+    SECRET_KEY=os.getenv("SECRET_KEY", "dev-mitabo-secret-key-change-in-production"),
     MAX_CONTENT_LENGTH=1024 * 1024 * 1024,
-    DEBUG=True,
+    DEBUG=False,
     SQLALCHEMY_ENGINE_OPTIONS={
-        "pool_size": 3,
-        "max_overflow": 5,
-        "pool_timeout": 30,
-        "pool_pre_ping": True,
-        "pool_recycle": 300,
-        "connect_args": {
-            "connect_timeout": 10,
-            "keepalives": 1,
-            "keepalives_idle": 30,
-            "keepalives_interval": 10,
-            "keepalives_count": 5,
-            "sslmode": "require",
-            "options": "-c statement_timeout=30000"
-        },
-        "isolation_level": "READ COMMITTED",
-        "execution_options": {
-            "postgresql_readonly": False,
-            "postgresql_deferrable": False
-        }
+        "pool_size": 2,
+        "max_overflow": 3,
+        "pool_timeout": 20,
+        "pool_pre_ping": False,
+        "pool_recycle": 300
     }
 )
 
+# ------------------------------
+# Initialisation DB et Migrate avec l'app
+# ------------------------------
+db.init_app(app)
+migrate.init_app(app, db)
+
+# Import des modeles APRES l'initialisation
+from models import Video, Like, Xp, User, Follow, Comment
+
+# ------------------------------
+# Fonction de connexion DB simplifiée (ne crash jamais)
+# ------------------------------
+def init_db_connection():
+    """Tente de se connecter à la DB - ne crash pas si échec"""
+    try:
+        with app.app_context():
+            db.session.execute(text("SELECT 1"))
+            print("✓ Connexion DB réussie")
+            return True
+    except Exception as e:
+        print(f"⚠ DB non disponible au démarrage: {type(e).__name__}")
+        return False
+
+# Ne pas crasher si DB indisponible au démarrage
+print("⏳ Test de connexion DB...")
+init_db_connection()
+
+# ------------------------------
+# Middleware pour gerer les deconnexions DB
+# ------------------------------
+@app.before_request
+def before_request():
+    """Vérifie la connexion DB avant chaque requête"""
+    if request.endpoint and request.endpoint != 'static':
+        try:
+            db.session.execute(text("SELECT 1"))
+        except Exception:
+            try:
+                db.session.rollback()
+                db.session.execute(text("SELECT 1"))
+            except Exception:
+                pass  # Continue même si DB down
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    """Nettoie la session DB après chaque requête"""
+    try:
+        if exception:
+            db.session.rollback()
+        db.session.remove()
+    except Exception:
+        pass
 
 # ------------------------------
 # Initialisation DB et Migrate avec l'app
@@ -1723,4 +1741,5 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
