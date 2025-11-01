@@ -11,6 +11,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(255), unique=True, index=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     display_name = db.Column(db.String(120), nullable=False)
+    bio = db.Column(db.Text, nullable=True)
+    avatar_url = db.Column(db.String(500), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)
     
@@ -56,23 +58,7 @@ class User(UserMixin, db.Model):
     def following_count(self):
         """Nombre d'abonnements"""
         return self.following.count()
-    
-    def is_following(self, user):
-        """Vérifie si cet utilisateur suit un autre utilisateur"""
-        return Follow.query.filter_by(
-            follower_id=self.id, 
-            followed_id=user.id
-        ).first() is not None
-    
-    @property
-    def followers_count(self):
-        """Nombre d'abonnés"""
-        return self.followers.count()
-    
-    @property
-    def following_count(self):
-        """Nombre d'abonnements"""
-        return self.following.count()
+
 
 class Video(db.Model):
     __tablename__ = "videos"
@@ -163,4 +149,3 @@ class Xp(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     __table_args__ = (db.UniqueConstraint('user_id', 'video_id', name="unique_user_xp"),)
-
