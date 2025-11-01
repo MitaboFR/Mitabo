@@ -42,21 +42,21 @@ app = Flask(__name__)
 # ------------------------------
 uri = os.getenv("DATABASE_URL")
 if not uri:
-    raise RuntimeError("DATABASE_URL not set! Configure it in Render environment variables.")
+    raise RuntimeError("DATABASE_URL not set!")
 
-# Corrige pour pg8000 (driver Python pur, sans problèmes SSL)
+# Corrige pour pg8000
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql+pg8000://", 1)
 elif uri.startswith("postgresql://"):
     uri = uri.replace("postgresql://", "postgresql+pg8000://", 1)
 
-# Ajoute SSL pour pg8000
-if "?" not in uri:
-    uri += "?ssl_context=true"
-else:
-    uri += "&ssl_context=true"
+# IMPORTANT : pg8000 n'accepte PAS sslmode dans l'URI
+# On le gère via connect_args à la place
+if "?" in uri:
+    # Supprime tous les params de l'URI
+    uri = uri.split("?")[0]
 
-print(f"🔗 Connexion DB configurée")
+print(f"✓ URI DB configuré pour pg8000")
 
 # Configuration SQLAlchemy + app
 app.config.update(
@@ -67,10 +67,13 @@ app.config.update(
     DEBUG=False,
     SQLALCHEMY_ENGINE_OPTIONS={
         "pool_size": 2,
-        "max_overflow": 3,
+        "max_overflow": 2,
         "pool_timeout": 20,
         "pool_pre_ping": False,
-        "pool_recycle": 300
+        "pool_recycle": 300,
+        "connect_args": {
+            "ssl_context": True  # SSL pour pg8000
+        }
     }
 )
 
@@ -1754,6 +1757,7 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
 
 
