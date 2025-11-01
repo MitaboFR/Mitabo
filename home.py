@@ -230,15 +230,15 @@ def transcode_to_hls(input_path: str, target_dir: str) -> str:
 
 def init_db():
     """Initialise la base de donnees avec des donnees de test"""
-    with app.app_context():
-        try:
+    try:
+        with app.app_context():
             db.create_all()
             if User.query.count() == 0:
                 u = User(email="demo@mitabo.dev", display_name="Demo")
                 u.set_password("demo1234")
                 db.session.add(u)
                 db.session.commit()
-                print("Utilisateur demo cree: demo@mitabo.dev / demo1234")
+                print("✓ Utilisateur demo cree: demo@mitabo.dev / demo1234")
             
             if Video.query.count() == 0:
                 user = User.query.first()
@@ -255,9 +255,9 @@ def init_db():
                     )
                     db.session.add(demo)
                     db.session.commit()
-                    print("Video de demo creee")
-        except Exception as e:
-            print(f"Erreur lors de l'initialisation de la DB: {e}")
+                    print("✓ Video de demo creee")
+    except Exception as e:
+        print(f"⚠ Erreur init_db: {e}")
 
 # -------------------------
 # Templates
@@ -1694,61 +1694,3 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
