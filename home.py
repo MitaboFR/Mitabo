@@ -23,6 +23,21 @@ from sqlalchemy.exc import OperationalError
 from extensions import db, migrate
 
 # ------------------------------
+# Désactive les fonctionnalités PostgreSQL non essentielles
+# ------------------------------
+import sqlalchemy.dialects.postgresql as pg_dialect
+
+# Empêche psycopg2 de charger hstore (qui cause des problèmes SSL)
+original_initialize = pg_dialect.psycopg2.PGDialect_psycopg2.initialize
+
+def patched_initialize(self, connection):
+    original_initialize(self, connection)
+    self.supports_native_enum = False
+    self._hstore_oids = lambda conn: (None, None)
+    
+pg_dialect.psycopg2.PGDialect_psycopg2.initialize = patched_initialize
+
+# ------------------------------
 # Configuration des repertoires
 # ------------------------------
 BASE_DIR = os.path.dirname(__file__)
@@ -44,16 +59,24 @@ uri = os.getenv("DATABASE_URL")
 if not uri:
     raise RuntimeError("DATABASE_URL not set! Configure it in Render environment variables.")
 
+uri = os.getenv("DATABASE_URL")
+if not uri:
+    raise RuntimeError("DATABASE_URL not set! Configure it in Render environment variables.")
+
 # Corrige l'ancien format postgres://
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-# Force SSL prefer pour Supabase si necessaire
-if "supabase.co" in uri and "sslmode=" not in uri:
-    if "?" in uri:
-        uri += "&sslmode=prefer"
-    else:
-        uri += "?sslmode=prefer"
+# Force SSL require pour Supabase/Render
+if "sslmode=" in uri:
+    uri = uri.replace("sslmode=prefer", "sslmode=require")
+    uri = uri.replace("sslmode=disable", "sslmode=require")
+elif "?" in uri:
+    uri += "&sslmode=require"
+else:
+    uri += "?sslmode=require"
+
+print(f"🔗 Connexion DB: {uri.split('@')[0]}@...")  # Log sans password
 
 # Configuration SQLAlchemy + app
 app.config.update(
@@ -63,8 +86,8 @@ app.config.update(
     MAX_CONTENT_LENGTH=1024 * 1024 * 1024,
     DEBUG=True,
     SQLALCHEMY_ENGINE_OPTIONS={
-        "pool_size": 5,
-        "max_overflow": 10,
+        "pool_size": 3,
+        "max_overflow": 5,
         "pool_timeout": 30,
         "pool_pre_ping": True,
         "pool_recycle": 300,
@@ -74,7 +97,13 @@ app.config.update(
             "keepalives_idle": 30,
             "keepalives_interval": 10,
             "keepalives_count": 5,
+            "sslmode": "require",
             "options": "-c statement_timeout=30000"
+        },
+        "isolation_level": "READ COMMITTED",
+        "execution_options": {
+            "postgresql_readonly": False,
+            "postgresql_deferrable": False
         }
     }
 )
@@ -1694,3 +1723,4 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
