@@ -44,18 +44,16 @@ uri = os.getenv("DATABASE_URL")
 if not uri:
     raise RuntimeError("DATABASE_URL not set!")
 
-# Corrige pour pg8000
+# Corrige l'ancien format postgres://
 if uri.startswith("postgres://"):
-    uri = uri.replace("postgres://", "postgresql+pg8000://", 1)
-elif uri.startswith("postgresql://"):
-    uri = uri.replace("postgresql://", "postgresql+pg8000://", 1)
+    uri = uri.replace("postgres://", "postgresql://", 1)
 
-# IMPORTANT : pg8000 n'accepte PAS de params dans l'URI
-# Supprime tout après "?"
+# Supprime les params SSL de l'URI (gérés via connect_args)
 if "?" in uri:
-    uri = uri.split("?")[0]
+    base_uri = uri.split("?")[0]
+    uri = base_uri
 
-print(f"✓ URI DB configuré pour pg8000")
+print(f"✓ URI DB configuré")
 
 # Configuration SQLAlchemy + app
 app.config.update(
@@ -66,12 +64,17 @@ app.config.update(
     DEBUG=False,
     SQLALCHEMY_ENGINE_OPTIONS={
         "pool_size": 1,
-        "max_overflow": 1,
-        "pool_timeout": 15,
+        "max_overflow": 0,
+        "pool_timeout": 10,
         "pool_pre_ping": False,
-        "pool_recycle": 300,
+        "pool_recycle": 280,
         "connect_args": {
-            "ssl_context": True  # SSL géré par connect_args
+            "sslmode": "require",
+            "connect_timeout": 10,
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5
         }
     }
 )
@@ -97,17 +100,17 @@ from models import Video, Like, Xp, User, Follow, Comment
 # ------------------------------
 with app.app_context():
     try:
+        # Test de connexion simple
+        db.session.execute(text("SELECT 1")).scalar()
+        print("✓ Connexion DB réussie")
+        
         # Crée les tables si elles n'existent pas
         db.create_all()
         print("✓ Tables créées/vérifiées")
-        
-        # Test de connexion
-        result = db.session.execute(text("SELECT 1")).scalar()
-        print(f"✓ Connexion DB réussie (test={result})")
     except Exception as e:
-        print(f"⚠ Erreur DB au démarrage: {type(e).__name__}")
-        import traceback
-        traceback.print_exc()
+        print(f"⚠ Erreur DB: {type(e).__name__}: {str(e)[:100]}")
+        # Ne pas crasher - l'app peut démarrer sans DB pour Gunicorn
+        pass
 
 # ------------------------------
 # Middleware pour gérer les déconnexions DB
@@ -1690,6 +1693,7 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
 
 
