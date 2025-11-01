@@ -50,10 +50,9 @@ if uri.startswith("postgres://"):
 elif uri.startswith("postgresql://"):
     uri = uri.replace("postgresql://", "postgresql+pg8000://", 1)
 
-# IMPORTANT : pg8000 n'accepte PAS sslmode dans l'URI
-# On le gère via connect_args à la place
+# IMPORTANT : pg8000 n'accepte PAS de params dans l'URI
+# Supprime tout après "?"
 if "?" in uri:
-    # Supprime tous les params de l'URI
     uri = uri.split("?")[0]
 
 print(f"✓ URI DB configuré pour pg8000")
@@ -66,60 +65,49 @@ app.config.update(
     MAX_CONTENT_LENGTH=1024 * 1024 * 1024,
     DEBUG=False,
     SQLALCHEMY_ENGINE_OPTIONS={
-        "pool_size": 2,
-        "max_overflow": 2,
-        "pool_timeout": 20,
+        "pool_size": 1,
+        "max_overflow": 1,
+        "pool_timeout": 15,
         "pool_pre_ping": False,
         "pool_recycle": 300,
         "connect_args": {
-            "ssl_context": True  # SSL pour pg8000
+            "ssl_context": True  # SSL géré par connect_args
         }
     }
 )
 
 # ------------------------------
-# Initialisation DB et Migrate avec l'app
+# Initialisation DB et Migrate (UNE SEULE FOIS)
 # ------------------------------
 try:
     db.init_app(app)
     migrate.init_app(app, db)
     print("✓ SQLAlchemy initialisé")
 except RuntimeError as e:
-    if "already been registered" not in str(e):
+    if "already been registered" in str(e):
+        print("⚠ SQLAlchemy déjà initialisé (ignoré)")
+    else:
         raise
-    print("⚠ SQLAlchemy déjà initialisé")
 
 # Import des modeles APRES l'initialisation
 from models import Video, Like, Xp, User, Follow, Comment
 
 # ------------------------------
-# Création des tables au démarrage
+# Création des tables et test de connexion
 # ------------------------------
 with app.app_context():
     try:
+        # Crée les tables si elles n'existent pas
         db.create_all()
         print("✓ Tables créées/vérifiées")
+        
+        # Test de connexion
+        result = db.session.execute(text("SELECT 1")).scalar()
+        print(f"✓ Connexion DB réussie (test={result})")
     except Exception as e:
-        print(f"⚠ Erreur création tables: {e}")
-
-# ------------------------------
-# Fonction de connexion DB simplifiée
-# ------------------------------
-def test_db_connection():
-    """Teste la connexion DB"""
-    try:
-        with app.app_context():
-            # Test avec une vraie query
-            from sqlalchemy import inspect
-            inspector = inspect(db.engine)
-            tables = inspector.get_table_names()
-            print(f"✓ Connexion DB OK - {len(tables)} tables trouvées")
-            return True
-    except Exception as e:
-        print(f"⚠ DB non disponible: {type(e).__name__}")
+        print(f"⚠ Erreur DB au démarrage: {type(e).__name__}")
         import traceback
         traceback.print_exc()
-        return False
 
 # ------------------------------
 # Middleware pour gérer les déconnexions DB
@@ -132,61 +120,6 @@ def before_request():
             db.session.execute(text("SELECT 1"))
         except Exception:
             db.session.rollback()
-
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    """Nettoie la session DB après chaque requête"""
-    try:
-        if exception:
-            db.session.rollback()
-        db.session.remove()
-    except Exception:
-        pass
-
-# ------------------------------
-# Initialisation DB et Migrate avec l'app
-# ------------------------------
-db.init_app(app)
-migrate.init_app(app, db)
-
-# Import des modeles APRES l'initialisation
-from models import Video, Like, Xp, User, Follow, Comment
-
-# ------------------------------
-# Fonction de connexion DB avec retry (sans crash)
-# ------------------------------
-def init_db_connection():
-    """Tente de se connecter à la DB avec retry"""
-    retries = 5
-    for i in range(retries):
-        try:
-            with app.app_context():
-                db.session.execute(text("SELECT 1"))
-                print("✓ Connexion DB reussie")
-                return True
-        except OperationalError as e:
-            print(f"⚠ Tentative {i+1}/{retries} échouée")
-            time.sleep(3)
-    print("⚠ Impossible de se connecter à la DB, l'app continuera sans")
-    return False
-
-# Essaye de se connecter mais ne crash pas
-init_db_connection()
-
-# ------------------------------
-# Middleware pour gerer les deconnexions DB
-# ------------------------------
-@app.before_request
-def before_request():
-    """Vérifie la connexion DB avant chaque requête"""
-    try:
-        db.session.execute(text("SELECT 1"))
-    except OperationalError:
-        db.session.rollback()
-        try:
-            db.session.execute(text("SELECT 1"))
-        except Exception:
-            pass  # Ne pas crasher, juste logger
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
@@ -1757,6 +1690,7 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
 
 
