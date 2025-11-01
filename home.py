@@ -75,54 +75,60 @@ app.config.update(
 )
 
 # ------------------------------
-# Initialisation DB et Migrate avec l'app (UNE SEULE FOIS)
+# Initialisation DB et Migrate avec l'app
 # ------------------------------
 try:
     db.init_app(app)
     migrate.init_app(app, db)
     print("✓ SQLAlchemy initialisé")
 except RuntimeError as e:
-    if "already been registered" in str(e):
-        print("⚠ SQLAlchemy déjà initialisé (normal avec Gunicorn)")
-    else:
+    if "already been registered" not in str(e):
         raise
+    print("⚠ SQLAlchemy déjà initialisé")
 
 # Import des modeles APRES l'initialisation
 from models import Video, Like, Xp, User, Follow, Comment
 
 # ------------------------------
-# Fonction de connexion DB simplifiée (ne crash jamais)
+# Création des tables au démarrage
 # ------------------------------
-def init_db_connection():
-    """Tente de se connecter à la DB - ne crash pas si échec"""
+with app.app_context():
+    try:
+        db.create_all()
+        print("✓ Tables créées/vérifiées")
+    except Exception as e:
+        print(f"⚠ Erreur création tables: {e}")
+
+# ------------------------------
+# Fonction de connexion DB simplifiée
+# ------------------------------
+def test_db_connection():
+    """Teste la connexion DB"""
     try:
         with app.app_context():
-            db.session.execute(text("SELECT 1"))
-            print("✓ Connexion DB réussie")
+            # Test avec une vraie query
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            print(f"✓ Connexion DB OK - {len(tables)} tables trouvées")
             return True
     except Exception as e:
-        print(f"⚠ DB non disponible au démarrage: {type(e).__name__}")
+        print(f"⚠ DB non disponible: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         return False
 
-# Ne pas crasher si DB indisponible au démarrage
-print("⏳ Test de connexion DB...")
-init_db_connection()
-
 # ------------------------------
-# Middleware pour gerer les deconnexions DB
+# Middleware pour gérer les déconnexions DB
 # ------------------------------
 @app.before_request
 def before_request():
     """Vérifie la connexion DB avant chaque requête"""
-    if request.endpoint and request.endpoint != 'static':
+    if request.endpoint not in ['static', 'favicon', None]:
         try:
             db.session.execute(text("SELECT 1"))
         except Exception:
-            try:
-                db.session.rollback()
-                db.session.execute(text("SELECT 1"))
-            except Exception:
-                pass  # Continue même si DB down
+            db.session.rollback()
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
