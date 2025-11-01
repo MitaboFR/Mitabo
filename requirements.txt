@@ -1,11 +1,11 @@
+# Rebuild forcé - 2025-11-01 18:40
 Flask==3.1.2
 Flask-SQLAlchemy==3.1.1
-Flask-Migrate==4.1.0
 Flask-Login==0.6.3
+psycopg2-binary==2.9.11
 SQLAlchemy==2.0.44
 gunicorn==23.0.0
 Pillow==12.0.0
 ffmpeg-python==0.2.0
 supabase==2.23.0
 Werkzeug==3.1.3
-
