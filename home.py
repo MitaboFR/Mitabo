@@ -90,44 +90,50 @@ migrate.init_app(app, db)
 from models import Video, Like, Xp, User, Follow, Comment
 
 # ------------------------------
-# Bloc retry connexion DB au demarrage (important pour Render)
+# Fonction de connexion DB avec retry (sans crash)
 # ------------------------------
-with app.app_context():
+def init_db_connection():
+    """Tente de se connecter à la DB avec retry"""
     retries = 5
     for i in range(retries):
         try:
-            db.session.execute(text("SELECT 1"))
-            print("Connexion a la base de donnees reussie")
-            break
+            with app.app_context():
+                db.session.execute(text("SELECT 1"))
+                print("✓ Connexion DB reussie")
+                return True
         except OperationalError as e:
-            print(f"Tentative {i+1}/{retries} : connexion DB echouee — {e}")
+            print(f"⚠ Tentative {i+1}/{retries} échouée")
             time.sleep(3)
-    else:
-        raise RuntimeError("Impossible de se connecter a la base apres plusieurs tentatives")
+    print("⚠ Impossible de se connecter à la DB, l'app continuera sans")
+    return False
+
+# Essaye de se connecter mais ne crash pas
+init_db_connection()
 
 # ------------------------------
 # Middleware pour gerer les deconnexions DB
 # ------------------------------
 @app.before_request
 def before_request():
-    """Verifie la connexion DB avant chaque requete"""
+    """Vérifie la connexion DB avant chaque requête"""
     try:
         db.session.execute(text("SELECT 1"))
     except OperationalError:
-        print("Connexion DB perdue, tentative de reconnexion...")
         db.session.rollback()
         try:
             db.session.execute(text("SELECT 1"))
-            print("Reconnexion reussie")
-        except Exception as e:
-            print(f"Reconnexion echouee: {e}")
+        except Exception:
+            pass  # Ne pas crasher, juste logger
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
-    """Nettoie la session DB apres chaque requete"""
-    if exception:
-        db.session.rollback()
-    db.session.remove()
+    """Nettoie la session DB après chaque requête"""
+    try:
+        if exception:
+            db.session.rollback()
+        db.session.remove()
+    except Exception:
+        pass
 
 # ------------------------------
 # Initialisation LoginManager
@@ -1688,6 +1694,7 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
 
 
