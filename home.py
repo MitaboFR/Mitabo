@@ -75,10 +75,17 @@ app.config.update(
 )
 
 # ------------------------------
-# Initialisation DB et Migrate avec l'app
+# Initialisation DB et Migrate avec l'app (UNE SEULE FOIS)
 # ------------------------------
-db.init_app(app)
-migrate.init_app(app, db)
+try:
+    db.init_app(app)
+    migrate.init_app(app, db)
+    print("✓ SQLAlchemy initialisé")
+except RuntimeError as e:
+    if "already been registered" in str(e):
+        print("⚠ SQLAlchemy déjà initialisé (normal avec Gunicorn)")
+    else:
+        raise
 
 # Import des modeles APRES l'initialisation
 from models import Video, Like, Xp, User, Follow, Comment
@@ -1741,5 +1748,6 @@ if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
 
